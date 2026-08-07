@@ -4,7 +4,7 @@
 // pattern already used on the JWings tracking site.
 
 const SUPABASE_URL = "https://jalswkctkuidzucocrmh.supabase.co"; // jwings-marketplace project
-const SUPABASE_ANON_KEY = "ufpjancczhdpcfdbrmap"; // TODO: get from Supabase → Settings → API
+const SUPABASE_ANON_KEY = "PASTE-YOUR-ANON-KEY-HERE"; // TODO: get from Supabase → Settings → API
 
 const baseHeaders = {
   "apikey": SUPABASE_ANON_KEY,
@@ -88,6 +88,64 @@ async function signOut(accessToken) {
   });
 }
 
+// Confirms the 6-digit code sent to the user's email after signup.
+// type is "signup" for new-account confirmation, "email" for email-change, etc.
+async function verifyOtp(email, token, type = "signup") {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ email, token, type }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error_description || err.msg || `Verification failed: ${res.status}`);
+  }
+  return res.json(); // contains access_token, refresh_token, user
+}
+
+// Re-sends the signup confirmation email (with a fresh OTP code).
+async function resendOtp(email, type = "signup") {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/resend`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ email, type }),
+  });
+  if (!res.ok) throw new Error(`Resend failed: ${res.status}`);
+  return true;
+}
+
+// ---- Session helpers ------------------------------------------------------
+
+function saveSession(session) {
+  localStorage.setItem("jwings_session", JSON.stringify(session));
+}
+
+function getSession() {
+  const raw = localStorage.getItem("jwings_session");
+  return raw ? JSON.parse(raw) : null;
+}
+
+function clearSession() {
+  localStorage.removeItem("jwings_session");
+}
+
+// Fetches the current user's profile row using their access token.
+async function getMyProfile(accessToken) {
+  const rows = await dbSelect("profiles", "select=*&limit=1", accessToken);
+  return rows[0] || null;
+}
+
+// Sends the browser to the right dashboard/home page based on role.
+function redirectForRole(role) {
+  const routes = {
+    customer: "/customer/dashboard.html",
+    vendor: "/vendor/dashboard.html",
+    rider: "/rider/dashboard.html",
+    admin: "/admin/dashboard.html",
+  };
+  window.location.href = routes[role] || "/customer/dashboard.html";
+}
+
 // ---- Exports ------------------------------------------------------------
 
 window.JWingsDB = {
@@ -98,4 +156,11 @@ window.JWingsDB = {
   signUp,
   signIn,
   signOut,
+  verifyOtp,
+  resendOtp,
+  saveSession,
+  getSession,
+  clearSession,
+  getMyProfile,
+  redirectForRole,
 };

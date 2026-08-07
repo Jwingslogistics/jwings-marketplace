@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create your account — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/auth.css" />
+</head>
+<body>
+<div class="auth-shell">
+
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Logistics</span>
+    </div>
+    <div class="brand-copy">
+      <div class="eyebrow">Marketplace</div>
+      <h1>Shop. Ship.<br/>We deliver.</h1>
+      <p>Join thousands of customers and vendors moving goods across the
+        country with JWings — reliable delivery built into every order.</p>
+    </div>
+    <div class="brand-stats">
+      <div><strong>128+</strong><span>Active vendors</span></div>
+      <div><strong>4.7★</strong><span>Average rating</span></div>
+      <div><strong>24/7</strong><span>Rider network</span></div>
+    </div>
+  </div>
+
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="mobile-logo">
+        <img src="/assets/images/jwings-logo.png" alt="JWings" />
+        <span>JWings Logistics</span>
+      </div>
+
+      <h2>Create your account</h2>
+      <p class="subtitle">Get started in less than a minute.</p>
+
+      <div class="error-banner" id="errorBanner"></div>
+
+      <div class="role-tabs" role="tablist" aria-label="Account type">
+        <button type="button" class="active" data-role="customer" id="tabCustomer">Customer</button>
+        <button type="button" data-role="rider" id="tabRider">Rider</button>
+      </div>
+
+      <form id="signupForm">
+        <div class="field">
+          <label for="fullName">Full name</label>
+          <input type="text" id="fullName" name="fullName" placeholder="e.g. Ada Obi" required />
+        </div>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
+        </div>
+        <div class="field">
+          <label for="phone">Phone number</label>
+          <input type="tel" id="phone" name="phone" placeholder="0810 000 0000" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="At least 8 characters" minlength="8" required />
+          <div class="hint">Use 8+ characters with a mix of letters and numbers.</div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Create account</button>
+      </form>
+
+      <div class="divider">or sign up with</div>
+      <div class="oauth-row">
+        <button type="button" class="oauth-btn" id="googleBtn">Google</button>
+        <button type="button" class="oauth-btn" id="appleBtn">Apple</button>
+      </div>
+
+      <p class="foot-note">Already have an account? <a href="/customer/login.html">Log in</a></p>
+    </div>
+  </div>
+
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  let selectedRole = "customer";
+  const tabCustomer = document.getElementById("tabCustomer");
+  const tabRider = document.getElementById("tabRider");
+  const errorBanner = document.getElementById("errorBanner");
+  const submitBtn = document.getElementById("submitBtn");
+
+  function setRole(role) {
+    selectedRole = role;
+    tabCustomer.classList.toggle("active", role === "customer");
+    tabRider.classList.toggle("active", role === "rider");
+  }
+  tabCustomer.addEventListener("click", () => setRole("customer"));
+  tabRider.addEventListener("click", () => setRole("rider"));
+
+  function showError(message) {
+    errorBanner.textContent = message;
+    errorBanner.classList.add("show");
+  }
+  function hideError() {
+    errorBanner.classList.remove("show");
+  }
+
+  document.getElementById("signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    hideError();
+
+    const fullName = document.getElementById("fullName").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("password").value;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creating account...";
+
+    try {
+      await window.JWingsDB.signUp(email, password, {
+        full_name: fullName,
+        phone: phone,
+        role: selectedRole,
+      });
+
+      // Carry email + role forward to the OTP screen via sessionStorage
+      sessionStorage.setItem("jwings_pending_email", email);
+      sessionStorage.setItem("jwings_pending_role", selectedRole);
+      window.location.href = "/customer/verify-otp.html";
+    } catch (err) {
+      showError(err.message || "Something went wrong. Please try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create account";
+    }
+  });
+
+  // OAuth buttons are placeholders until Google/Apple provider keys are configured in Supabase.
+  document.getElementById("googleBtn").addEventListener("click", () => {
+    showError("Google sign-up isn't configured yet — please use email for now.");
+  });
+  document.getElementById("appleBtn").addEventListener("click", () => {
+    showError("Apple sign-up isn't configured yet — please use email for now.");
+  });
+</script>
+</body>
+</html>

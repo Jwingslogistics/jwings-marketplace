@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verify your email — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/auth.css" />
+</head>
+<body>
+<div class="auth-shell">
+
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Logistics</span>
+    </div>
+    <div class="brand-copy">
+      <div class="eyebrow">Almost there</div>
+      <h1>Just one<br/>more step.</h1>
+      <p>We've sent a 6-digit code to your email. Enter it to verify your
+        account and start using JWings Marketplace.</p>
+    </div>
+    <div class="brand-stats">
+      <div><strong>128+</strong><span>Active vendors</span></div>
+      <div><strong>4.7★</strong><span>Average rating</span></div>
+      <div><strong>24/7</strong><span>Rider network</span></div>
+    </div>
+  </div>
+
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="mobile-logo">
+        <img src="/assets/images/jwings-logo.png" alt="JWings" />
+        <span>JWings Logistics</span>
+      </div>
+
+      <h2>Verify your email</h2>
+      <p class="subtitle" id="subtitleText">Enter the 6-digit code we sent to your email.</p>
+
+      <div class="error-banner" id="errorBanner"></div>
+      <div class="success-banner" id="successBanner"></div>
+
+      <form id="otpForm">
+        <div class="otp-inputs" id="otpInputs">
+          <input type="text" inputmode="numeric" maxlength="1" autofocus />
+          <input type="text" inputmode="numeric" maxlength="1" />
+          <input type="text" inputmode="numeric" maxlength="1" />
+          <input type="text" inputmode="numeric" maxlength="1" />
+          <input type="text" inputmode="numeric" maxlength="1" />
+          <input type="text" inputmode="numeric" maxlength="1" />
+        </div>
+
+        <div class="otp-timer">
+          <span id="timerText">Code expires in <strong id="countdown">05:00</strong></span>
+          <br/>
+          <button type="button" id="resendBtn" disabled>Resend code</button>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Verify account</button>
+      </form>
+
+      <p class="foot-note">Wrong email? <a href="/customer/signup.html">Go back</a></p>
+    </div>
+  </div>
+
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const email = sessionStorage.getItem("jwings_pending_email");
+  const role = sessionStorage.getItem("jwings_pending_role") || "customer";
+
+  if (!email) {
+    // No pending signup found — send them back to start over.
+    window.location.href = "/customer/signup.html";
+  }
+
+  document.getElementById("subtitleText").textContent = `Enter the 6-digit code we sent to ${email}.`;
+
+  const inputs = Array.from(document.querySelectorAll("#otpInputs input"));
+  inputs.forEach((input, i) => {
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/[^0-9]/g, "");
+      if (input.value && i < inputs.length - 1) inputs[i + 1].focus();
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !input.value && i > 0) inputs[i - 1].focus();
+    });
+    input.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const digits = (e.clipboardData.getData("text") || "").replace(/[^0-9]/g, "").split("");
+      digits.forEach((d, idx) => { if (inputs[idx]) inputs[idx].value = d; });
+      const next = inputs[Math.min(digits.length, inputs.length - 1)];
+      if (next) next.focus();
+    });
+  });
+
+  function getCode() {
+    return inputs.map((i) => i.value).join("");
+  }
+
+  const errorBanner = document.getElementById("errorBanner");
+  const successBanner = document.getElementById("successBanner");
+  function showError(msg) { errorBanner.textContent = msg; errorBanner.classList.add("show"); successBanner.classList.remove("show"); }
+  function showSuccess(msg) { successBanner.textContent = msg; successBanner.classList.add("show"); errorBanner.classList.remove("show"); }
+  function clearBanners() { errorBanner.classList.remove("show"); successBanner.classList.remove("show"); }
+
+  // ---- Countdown timer ----
+  let secondsLeft = 300; // 5 minutes
+  const countdownEl = document.getElementById("countdown");
+  const resendBtn = document.getElementById("resendBtn");
+  const timerText = document.getElementById("timerText");
+
+  const timer = setInterval(() => {
+    secondsLeft--;
+    const m = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+    const s = String(secondsLeft % 60).padStart(2, "0");
+    countdownEl.textContent = `${m}:${s}`;
+    if (secondsLeft <= 0) {
+      clearInterval(timer);
+      timerText.style.display = "none";
+      resendBtn.disabled = false;
+      resendBtn.textContent = "Resend code";
+    }
+  }, 1000);
+
+  resendBtn.addEventListener("click", async () => {
+    resendBtn.disabled = true;
+    try {
+      await window.JWingsDB.resendOtp(email, "signup");
+      showSuccess("A new code has been sent to your email.");
+      secondsLeft = 300;
+      timerText.style.display = "inline";
+      const timer2 = setInterval(() => {
+        secondsLeft--;
+        const m = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+        const s = String(secondsLeft % 60).padStart(2, "0");
+        countdownEl.textContent = `${m}:${s}`;
+        if (secondsLeft <= 0) {
+          clearInterval(timer2);
+          timerText.style.display = "none";
+          resendBtn.disabled = false;
+        }
+      }, 1000);
+    } catch (err) {
+      showError("Couldn't resend the code. Please try again shortly.");
+      resendBtn.disabled = false;
+    }
+  });
+
+  document.getElementById("otpForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearBanners();
+    const code = getCode();
+    if (code.length !== 6) {
+      showError("Please enter all 6 digits.");
+      return;
+    }
+
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Verifying...";
+
+    try {
+      const result = await window.JWingsDB.verifyOtp(email, code, "signup");
+      window.JWingsDB.saveSession(result);
+      sessionStorage.removeItem("jwings_pending_email");
+      sessionStorage.removeItem("jwings_pending_role");
+      showSuccess("Account verified! Redirecting...");
+      setTimeout(() => window.JWingsDB.redirectForRole(role), 800);
+    } catch (err) {
+      showError(err.message || "That code didn't work. Please check and try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Verify account";
+    }
+  });
+</script>
+</body>
+</html>
