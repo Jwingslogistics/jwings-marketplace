@@ -4,7 +4,7 @@
 // pattern already used on the JWings tracking site.
 
 const SUPABASE_URL = "https://jalswkctkuidzucocrmh.supabase.co"; // jwings-marketplace project
-const SUPABASE_ANON_KEY = "PASTE-YOUR-ANON-KEY-HERE"; // TODO: get from Supabase → Settings → API
+const SUPABASE_ANON_KEY = "ufpjancczhdpcfdbrmap"; // TODO: get from Supabase → Settings → API
 
 const baseHeaders = {
   "apikey": SUPABASE_ANON_KEY,
