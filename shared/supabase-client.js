@@ -4,7 +4,9 @@
 // pattern already used on the JWings tracking site.
 
 const SUPABASE_URL = "https://jalswkctkuidzucocrmh.supabase.co"; // jwings-marketplace project
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g";const baseHeaders = {
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g";
+
+const baseHeaders = {
   "apikey": SUPABASE_ANON_KEY,
   "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
   "Content-Type": "application/json",
@@ -55,6 +57,27 @@ async function dbDelete(table, query, accessToken = null) {
   });
   if (!res.ok) throw new Error(`Delete failed on ${table}: ${res.status}`);
   return true;
+}
+
+// ---- Storage helper ---------------------------------------------------
+
+// Uploads a file to Supabase Storage and returns its public URL.
+// bucket: e.g. "product-images". path: a unique file path/name within the bucket.
+async function uploadFile(bucket, path, file, accessToken) {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Upload failed: ${res.status}`);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
 
 // ---- Auth helpers -----------------------------------------------------
@@ -151,6 +174,7 @@ window.JWingsDB = {
   insert: dbInsert,
   update: dbUpdate,
   remove: dbDelete,
+  uploadFile,
   signUp,
   signIn,
   signOut,

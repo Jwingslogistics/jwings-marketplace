@@ -40,8 +40,10 @@
 
   .product-table { width: 100%; border-collapse: collapse; }
   .product-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-  .product-table td { padding: 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .product-table td { padding: 12px; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: middle; }
   .product-table tr:last-child td { border-bottom: none; }
+  .thumb-cell { width: 48px; height: 48px; border-radius: 8px; background: var(--bg); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .thumb-cell img { width: 100%; height: 100%; object-fit: cover; }
   .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
   .status-active { background: #e9f9f1; color: var(--success); }
   .status-inactive { background: #f0f0f5; color: var(--muted); }
@@ -71,9 +73,35 @@
   .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
   .btn-primary { flex: 1; background: var(--orange-500); color: var(--white); border: none; padding: 12px 0; border-radius: 9px; font-weight: 700; font-size: 14.5px; cursor: pointer; }
   .btn-primary:hover { background: #e06f00; }
+  .btn-primary:disabled { background: #f3b877; cursor: not-allowed; }
   .btn-cancel { flex: 1; background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 12px 0; border-radius: 9px; font-weight: 600; font-size: 14.5px; cursor: pointer; }
   .error-banner { background: #fdecea; color: var(--danger); border: 1px solid #f5c6c2; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 14px; display: none; }
   .error-banner.show { display: block; }
+
+  .image-picker {
+    border: 1.5px dashed var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    background: var(--bg);
+  }
+  .image-picker:hover { border-color: var(--navy-500); }
+  .image-picker input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .image-picker .placeholder { font-size: 13px; color: var(--muted); }
+  .image-picker .placeholder strong { color: var(--navy-700); }
+  .image-preview-wrap { display: flex; align-items: center; gap: 12px; }
+  .image-preview {
+    width: 64px; height: 64px; border-radius: 10px; overflow: hidden;
+    background: var(--bg); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .image-picker-text { font-size: 13px; color: var(--muted); text-align: left; }
+  .image-picker-text .fname { color: var(--ink); font-weight: 600; }
+  .upload-progress { font-size: 12.5px; color: var(--orange-500); margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -105,7 +133,7 @@
     <div class="panel">
       <table class="product-table" id="productTable" style="display:none;">
         <thead>
-          <tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th></tr>
+          <tr><th></th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th></tr>
         </thead>
         <tbody id="productTableBody"></tbody>
       </table>
@@ -122,6 +150,16 @@
     <h3>Add a product</h3>
     <div class="error-banner" id="formError"></div>
     <form id="productForm">
+      <div class="field">
+        <label>Product photo</label>
+        <div class="image-picker" id="imagePicker">
+          <input type="file" id="pImageFile" accept="image/*" />
+          <div id="pickerContent">
+            <div class="placeholder"><strong>Tap to add a photo</strong><br/>JPG or PNG, up to 5MB</div>
+          </div>
+        </div>
+        <div class="upload-progress" id="uploadProgress" style="display:none;">Uploading photo...</div>
+      </div>
       <div class="field">
         <label>Product name</label>
         <input type="text" id="pName" required />
@@ -144,10 +182,6 @@
         <label>Category</label>
         <select id="pCategory"></select>
       </div>
-      <div class="field">
-        <label>Image URL (optional)</label>
-        <input type="url" id="pImage" placeholder="https://..." />
-      </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
         <button type="submit" class="btn-primary" id="saveBtn">Save product</button>
@@ -162,6 +196,7 @@
   if (!session) window.location.href = "/customer/login.html";
 
   let vendor = null;
+  let selectedFile = null;
 
   function money(amount, currency) {
     const symbol = currency === "NGN" ? "₦" : (currency || "");
@@ -225,20 +260,58 @@
 
     empty.style.display = "none";
     table.style.display = "table";
-    tbody.innerHTML = products.map(p => `
+    tbody.innerHTML = products.map(p => {
+      const thumb = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.name}" />` : "📦";
+      return `
       <tr>
+        <td><div class="thumb-cell">${thumb}</div></td>
         <td>${p.name}</td>
         <td>${p.categories ? p.categories.name : "—"}</td>
         <td>${money(p.price, p.currency)}</td>
         <td>${p.stock}</td>
         <td><span class="status-pill ${statusClass(p.status)}">${p.status.replace("_", " ")}</span></td>
-      </tr>`).join("");
+      </tr>`;
+    }).join("");
   }
 
   const backdrop = document.getElementById("modalBackdrop");
   document.getElementById("openModalBtn").addEventListener("click", () => backdrop.classList.add("show"));
-  document.getElementById("cancelBtn").addEventListener("click", () => backdrop.classList.remove("show"));
-  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) backdrop.classList.remove("show"); });
+  document.getElementById("cancelBtn").addEventListener("click", () => closeModal());
+  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+
+  function closeModal() {
+    backdrop.classList.remove("show");
+    document.getElementById("productForm").reset();
+    selectedFile = null;
+    resetImagePicker();
+  }
+
+  function resetImagePicker() {
+    document.getElementById("pickerContent").innerHTML = `
+      <div class="placeholder"><strong>Tap to add a photo</strong><br/>JPG or PNG, up to 5MB</div>`;
+  }
+
+  document.getElementById("pImageFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("That photo is a bit too large — please pick one under 5MB.");
+      e.target.value = "";
+      return;
+    }
+
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById("pickerContent").innerHTML = `
+        <div class="image-preview-wrap">
+          <div class="image-preview"><img src="${ev.target.result}" alt="Preview" /></div>
+          <div class="image-picker-text">Photo selected<br/><span class="fname">${file.name}</span></div>
+        </div>`;
+    };
+    reader.readAsDataURL(file);
+  });
 
   const formError = document.getElementById("formError");
 
@@ -251,13 +324,24 @@
     const price = parseFloat(document.getElementById("pPrice").value);
     const stock = parseInt(document.getElementById("pStock").value, 10);
     const categoryId = document.getElementById("pCategory").value;
-    const imageUrl = document.getElementById("pImage").value.trim();
 
     const saveBtn = document.getElementById("saveBtn");
+    const uploadProgress = document.getElementById("uploadProgress");
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving...";
 
     try {
+      let imageUrls = [];
+
+      if (selectedFile) {
+        uploadProgress.style.display = "block";
+        const ext = selectedFile.name.split(".").pop();
+        const path = `${vendor.id}/${Date.now()}.${ext}`;
+        const publicUrl = await window.JWingsDB.uploadFile("product-images", path, selectedFile, session.access_token);
+        imageUrls = [publicUrl];
+        uploadProgress.style.display = "none";
+      }
+
       await window.JWingsDB.insert("products", {
         vendor_id: vendor.id,
         category_id: categoryId || null,
@@ -266,14 +350,14 @@
         price,
         currency: vendor.currency,
         stock,
-        images: imageUrl ? [imageUrl] : [],
+        images: imageUrls,
         status: stock > 0 ? "active" : "out_of_stock",
       }, session.access_token);
 
-      backdrop.classList.remove("show");
-      document.getElementById("productForm").reset();
+      closeModal();
       await loadProducts();
     } catch (err) {
+      uploadProgress.style.display = "none";
       formError.textContent = err.message || "Couldn't save this product. Please try again.";
       formError.classList.add("show");
     } finally {
