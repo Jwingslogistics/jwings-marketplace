@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Book a Delivery — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --danger: #d64545; --success: #1e9e6a;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo img { width: 30px; height: 30px; }
+  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
+
+  .page-head { padding: 32px 6vw 8px; }
+  .page-head .eyebrow { color: var(--orange-500); font-size: 12.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; margin-bottom: 8px; }
+  .page-head h1 { font-family: var(--font-display); font-size: 28px; color: var(--navy-900); }
+  .page-head p { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
+
+  .layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; padding: 20px 6vw 72px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+  .panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-family: var(--font-body);
+  }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .package-types { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
+  @media (max-width: 520px) { .package-types { grid-template-columns: repeat(2, 1fr); } }
+  .package-type {
+    border: 1.5px solid var(--line); border-radius: 10px; padding: 12px 8px; text-align: center;
+    cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--muted);
+  }
+  .package-type .icon { font-size: 20px; display: block; margin-bottom: 6px; }
+  .package-type.selected { border-color: var(--navy-700); background: #f5f6ff; color: var(--navy-900); }
+
+  .delivery-options { display: flex; flex-direction: column; gap: 10px; }
+  .delivery-option {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border: 1.5px solid var(--line); border-radius: 10px; padding: 14px 16px; cursor: pointer;
+  }
+  .delivery-option.selected { border-color: var(--navy-700); background: #f5f6ff; }
+  .delivery-option .left { display: flex; align-items: center; gap: 12px; }
+  .delivery-option input { accent-color: var(--navy-700); }
+  .delivery-option .label { font-size: 14.5px; font-weight: 600; }
+  .delivery-option .sub { font-size: 12.5px; color: var(--muted); }
+  .delivery-option .fee { font-size: 14px; font-weight: 700; color: var(--navy-900); }
+
+  .summary-panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; position: sticky; top: 84px; }
+  .summary-panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 18px; }
+  .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 12px; color: var(--muted); }
+  .summary-row.total { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 6px; font-size: 18px; font-weight: 700; color: var(--navy-900); }
+  .fare-note { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 16px; line-height: 1.5; }
+
+  .submit-btn {
+    width: 100%; padding: 14px 0; background: var(--orange-500); color: var(--white); border: none;
+    border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: var(--font-body);
+  }
+  .submit-btn:hover { background: #e06f00; }
+  .submit-btn:disabled { background: #f3b877; cursor: not-allowed; }
+
+  .error-banner { background: #fdecea; color: var(--danger); border: 1px solid #f5c6c2; border-radius: 10px; padding: 11px 14px; font-size: 13.5px; margin-bottom: 18px; display: none; }
+  .error-banner.show { display: block; }
+
+  .confirm-state { text-align: center; padding: 70px 20px; }
+  .confirm-state .icon { font-size: 48px; margin-bottom: 18px; }
+  .confirm-state h2 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); margin-bottom: 10px; }
+  .confirm-state p { color: var(--muted); font-size: 15px; margin-bottom: 8px; }
+  .tracking-code {
+    display: inline-block; background: var(--bg); border: 1px dashed var(--line); border-radius: 10px;
+    padding: 10px 20px; font-family: var(--font-display); font-size: 20px; color: var(--navy-900);
+    font-weight: 600; letter-spacing: 1px; margin: 16px 0 24px;
+  }
+  .confirm-state a { display: inline-block; background: var(--orange-500); color: var(--white); padding: 12px 24px; border-radius: 10px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="/">
+    <img src="/assets/images/jwings-logo.png" alt="JWings" />
+    <span>JWings Logistics</span>
+  </a>
+</nav>
+
+<div class="page-head">
+  <div class="eyebrow">Parcel service</div>
+  <h1>Book a Delivery</h1>
+  <p>Sending something yourself? Enter the details below and we'll get it moving.</p>
+</div>
+
+<div id="pageContent">
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h3>📍 Pickup &amp; drop-off</h3>
+        <div class="error-banner" id="errorBanner"></div>
+        <div class="field">
+          <label for="pickupAddress">Pickup address</label>
+          <input type="text" id="pickupAddress" placeholder="Where should we collect the package?" required />
+        </div>
+        <div class="field">
+          <label for="dropoffAddress">Drop-off address</label>
+          <input type="text" id="dropoffAddress" placeholder="Where is it going?" required />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="recipientName">Recipient's name</label>
+            <input type="text" id="recipientName" placeholder="Who's receiving it?" required />
+          </div>
+          <div class="field">
+            <label for="recipientPhone">Recipient's phone</label>
+            <input type="tel" id="recipientPhone" placeholder="0810 000 0000" required />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>📦 Package details</h3>
+        <div class="field">
+          <label>Package type</label>
+          <div class="package-types" id="packageTypes">
+            <div class="package-type selected" data-type="document"><span class="icon">📄</span>Document</div>
+            <div class="package-type" data-type="parcel"><span class="icon">📦</span>Parcel</div>
+            <div class="package-type" data-type="fragile"><span class="icon">🍶</span>Fragile</div>
+            <div class="package-type" data-type="food"><span class="icon">🍱</span>Food</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="weight">Estimated weight (kg)</label>
+          <input type="number" id="weight" min="0.1" step="0.1" value="1" required />
+        </div>
+        <div class="field">
+          <label for="instructions">Special instructions (optional)</label>
+          <textarea id="instructions" rows="2" placeholder="Handle with care, call on arrival, etc."></textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>🚚 Delivery speed</h3>
+        <div class="delivery-options" id="deliveryOptions">
+          <label class="delivery-option selected" data-fee="1500">
+            <span class="left"><input type="radio" name="deliveryType" value="standard" checked />
+              <span><span class="label">Standard</span><br/><span class="sub">2–3 business days</span></span>
+            </span>
+            <span class="fee">₦1,500</span>
+          </label>
+          <label class="delivery-option" data-fee="2500">
+            <span class="left"><input type="radio" name="deliveryType" value="express" />
+              <span><span class="label">Express</span><br/><span class="sub">Next-day delivery</span></span>
+            </span>
+            <span class="fee">₦2,500</span>
+          </label>
+          <label class="delivery-option" data-fee="4000">
+            <span class="left"><input type="radio" name="deliveryType" value="same_day" />
+              <span><span class="label">Same-day</span><br/><span class="sub">Delivered today</span></span>
+            </span>
+            <span class="fee">₦4,000</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-panel">
+      <h3>Fare estimate</h3>
+      <div class="summary-row"><span>Delivery fee</span><span id="sumFee">₦1,500</span></div>
+      <div class="fare-note">Final fare may adjust slightly based on exact distance and package weight, confirmed before pickup.</div>
+      <div class="summary-row total"><span>Estimated total</span><span id="sumTotal">₦1,500</span></div>
+      <button class="submit-btn" id="submitBtn">Book this delivery</button>
+    </div>
+  </div>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html";
+
+  let selectedPackageType = "document";
+  let selectedFee = 1500;
+  let selectedDeliveryType = "standard";
+
+  function money(amount) { return `₦${Number(amount).toLocaleString()}`; }
+
+  function updateSummary() {
+    document.getElementById("sumFee").textContent = money(selectedFee);
+    document.getElementById("sumTotal").textContent = money(selectedFee);
+  }
+
+  document.getElementById("packageTypes").addEventListener("click", (e) => {
+    const el = e.target.closest(".package-type");
+    if (!el) return;
+    document.querySelectorAll(".package-type").forEach(p => p.classList.remove("selected"));
+    el.classList.add("selected");
+    selectedPackageType = el.getAttribute("data-type");
+  });
+
+  document.querySelectorAll(".delivery-option").forEach((el) => {
+    el.addEventListener("click", () => {
+      document.querySelectorAll(".delivery-option").forEach(o => o.classList.remove("selected"));
+      el.classList.add("selected");
+      el.querySelector("input").checked = true;
+      selectedFee = parseInt(el.getAttribute("data-fee"), 10);
+      selectedDeliveryType = el.querySelector("input").value;
+      updateSummary();
+    });
+  });
+
+  const errorBanner = document.getElementById("errorBanner");
+  function showError(msg) { errorBanner.textContent = msg; errorBanner.classList.add("show"); }
+
+  function generateTrackingId() {
+    const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+    return `JWT-${Date.now().toString().slice(-6)}${rand}`;
+  }
+
+  document.getElementById("submitBtn").addEventListener("click", async () => {
+    errorBanner.classList.remove("show");
+
+    const pickupAddress = document.getElementById("pickupAddress").value.trim();
+    const dropoffAddress = document.getElementById("dropoffAddress").value.trim();
+    const recipientName = document.getElementById("recipientName").value.trim();
+    const recipientPhone = document.getElementById("recipientPhone").value.trim();
+    const weight = parseFloat(document.getElementById("weight").value) || 1;
+    const instructions = document.getElementById("instructions").value.trim();
+
+    if (!pickupAddress || !dropoffAddress || !recipientName || !recipientPhone) {
+      showError("Please fill in the pickup, drop-off, and recipient details.");
+      return;
+    }
+
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.textContent = "Booking...";
+
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      const trackingId = generateTrackingId();
+
+      const shipments = await window.JWingsDB.insert("shipments", {
+        tracking_id: trackingId,
+        sender_id: profile.id,
+        pickup_address: pickupAddress,
+        dropoff_address: dropoffAddress,
+        recipient_name: recipientName,
+        recipient_phone: recipientPhone,
+        package_type: selectedPackageType,
+        package_weight_kg: weight,
+        delivery_type: selectedDeliveryType,
+        special_instructions: instructions || null,
+        delivery_fee: selectedFee,
+        currency: "NGN",
+        payment_status: "unpaid",
+        status: "order_received",
+      }, session.access_token);
+
+      const shipment = shipments[0];
+
+      document.getElementById("pageContent").innerHTML = `
+        <div class="confirm-state">
+          <div class="icon">📦</div>
+          <h2>Delivery booked!</h2>
+          <p>Your tracking number is:</p>
+          <div class="tracking-code">${shipment.tracking_id}</div>
+          <p>Save this code to track your package's journey.</p>
+          <a href="/customer/dashboard.html">Go to my dashboard</a>
+        </div>`;
+    } catch (err) {
+      showError(err.message || "Something went wrong booking this delivery. Please try again.");
+      btn.disabled = false;
+      btn.textContent = "Book this delivery";
+    }
+  });
+
+  updateSummary();
+</script>
+</body>
+</html>
