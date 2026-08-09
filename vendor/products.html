@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Products — JWings Vendor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+
+  .main { padding: 32px 4vw 64px; }
+  .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  .add-btn { background: var(--orange-500); color: var(--white); padding: 11px 20px; border-radius: 9px; font-weight: 700; font-size: 14px; border: none; cursor: pointer; }
+  .add-btn:hover { background: #e06f00; }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+
+  .product-table { width: 100%; border-collapse: collapse; }
+  .product-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .product-table td { padding: 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .product-table tr:last-child td { border-bottom: none; }
+  .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .status-active { background: #e9f9f1; color: var(--success); }
+  .status-inactive { background: #f0f0f5; color: var(--muted); }
+  .status-out { background: #fdecea; color: var(--danger); }
+
+  .empty-mini { text-align: center; padding: 40px 16px; }
+  .empty-mini .icon { font-size: 32px; margin-bottom: 10px; }
+
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0; background: rgba(15,26,92,0.45);
+    align-items: center; justify-content: center; padding: 20px; z-index: 100;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--white); border-radius: 16px; padding: 28px; width: 100%; max-width: 460px;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal h3 { font-family: var(--font-display); font-size: 19px; color: var(--navy-900); margin-bottom: 18px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-family: var(--font-body);
+  }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn-primary { flex: 1; background: var(--orange-500); color: var(--white); border: none; padding: 12px 0; border-radius: 9px; font-weight: 700; font-size: 14.5px; cursor: pointer; }
+  .btn-primary:hover { background: #e06f00; }
+  .btn-cancel { flex: 1; background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 12px 0; border-radius: 9px; font-weight: 600; font-size: 14.5px; cursor: pointer; }
+  .error-banner { background: #fdecea; color: var(--danger); border: 1px solid #f5c6c2; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 14px; display: none; }
+  .error-banner.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Vendor</span>
+    </div>
+    <nav>
+      <a href="/vendor/dashboard.html">Overview</a>
+      <a class="active" href="/vendor/products.html">Products</a>
+      <a href="#">Orders</a>
+      <a href="#">Analytics</a>
+      <a href="#">Wallet</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <div>
+        <h1>Products</h1>
+        <p id="countText">Loading...</p>
+      </div>
+      <button class="add-btn" id="openModalBtn">+ Add product</button>
+    </div>
+
+    <div class="panel">
+      <table class="product-table" id="productTable" style="display:none;">
+        <thead>
+          <tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th></tr>
+        </thead>
+        <tbody id="productTableBody"></tbody>
+      </table>
+      <div class="empty-mini" id="emptyState">
+        <div class="icon">📦</div>
+        <p style="color:#666a80; font-size:14px;">Loading products...</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h3>Add a product</h3>
+    <div class="error-banner" id="formError"></div>
+    <form id="productForm">
+      <div class="field">
+        <label>Product name</label>
+        <input type="text" id="pName" required />
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea id="pDescription" rows="3"></textarea>
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>Price</label>
+          <input type="number" id="pPrice" min="0" step="0.01" required />
+        </div>
+        <div class="field">
+          <label>Stock</label>
+          <input type="number" id="pStock" min="0" value="1" required />
+        </div>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="pCategory"></select>
+      </div>
+      <div class="field">
+        <label>Image URL (optional)</label>
+        <input type="url" id="pImage" placeholder="https://..." />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="saveBtn">Save product</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html";
+
+  let vendor = null;
+
+  function money(amount, currency) {
+    const symbol = currency === "NGN" ? "₦" : (currency || "");
+    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  }
+
+  function statusClass(status) {
+    if (status === "active") return "status-active";
+    if (status === "out_of_stock") return "status-out";
+    return "status-inactive";
+  }
+
+  async function loadVendorAndProducts() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "vendor") {
+      window.location.href = "/vendor/onboarding.html";
+      return;
+    }
+
+    const vendors = await window.JWingsDB.select(
+      "vendors", `select=*&profile_id=eq.${profile.id}&limit=1`, session.access_token
+    );
+    vendor = vendors[0];
+    if (!vendor) {
+      window.location.href = "/vendor/onboarding.html";
+      return;
+    }
+
+    document.getElementById("pPrice").placeholder = `Price in ${vendor.currency}`;
+
+    await loadCategories();
+    await loadProducts();
+  }
+
+  async function loadCategories() {
+    const categories = await window.JWingsDB.select("categories", "select=id,name&order=name.asc", session.access_token);
+    const select = document.getElementById("pCategory");
+    select.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+  }
+
+  async function loadProducts() {
+    const products = await window.JWingsDB.select(
+      "products", `select=*,categories(name)&vendor_id=eq.${vendor.id}&order=created_at.desc`, session.access_token
+    );
+
+    const table = document.getElementById("productTable");
+    const tbody = document.getElementById("productTableBody");
+    const empty = document.getElementById("emptyState");
+    const countText = document.getElementById("countText");
+
+    countText.textContent = `${products.length} product${products.length === 1 ? "" : "s"} in your store`;
+
+    if (products.length === 0) {
+      table.style.display = "none";
+      empty.style.display = "block";
+      empty.innerHTML = `
+        <div class="icon">📦</div>
+        <p style="color:#666a80; font-size:14px;">No products yet — add your first one to see it live on the marketplace.</p>`;
+      return;
+    }
+
+    empty.style.display = "none";
+    table.style.display = "table";
+    tbody.innerHTML = products.map(p => `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.categories ? p.categories.name : "—"}</td>
+        <td>${money(p.price, p.currency)}</td>
+        <td>${p.stock}</td>
+        <td><span class="status-pill ${statusClass(p.status)}">${p.status.replace("_", " ")}</span></td>
+      </tr>`).join("");
+  }
+
+  const backdrop = document.getElementById("modalBackdrop");
+  document.getElementById("openModalBtn").addEventListener("click", () => backdrop.classList.add("show"));
+  document.getElementById("cancelBtn").addEventListener("click", () => backdrop.classList.remove("show"));
+  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) backdrop.classList.remove("show"); });
+
+  const formError = document.getElementById("formError");
+
+  document.getElementById("productForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    formError.classList.remove("show");
+
+    const name = document.getElementById("pName").value.trim();
+    const description = document.getElementById("pDescription").value.trim();
+    const price = parseFloat(document.getElementById("pPrice").value);
+    const stock = parseInt(document.getElementById("pStock").value, 10);
+    const categoryId = document.getElementById("pCategory").value;
+    const imageUrl = document.getElementById("pImage").value.trim();
+
+    const saveBtn = document.getElementById("saveBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+
+    try {
+      await window.JWingsDB.insert("products", {
+        vendor_id: vendor.id,
+        category_id: categoryId || null,
+        name,
+        description: description || null,
+        price,
+        currency: vendor.currency,
+        stock,
+        images: imageUrl ? [imageUrl] : [],
+        status: stock > 0 ? "active" : "out_of_stock",
+      }, session.access_token);
+
+      backdrop.classList.remove("show");
+      document.getElementById("productForm").reset();
+      await loadProducts();
+    } catch (err) {
+      formError.textContent = err.message || "Couldn't save this product. Please try again.";
+      formError.classList.add("show");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save product";
+    }
+  });
+
+  loadVendorAndProducts();
+</script>
+</body>
+</html>

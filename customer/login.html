@@ -99,9 +99,6 @@
     e.preventDefault();
     hideError();
 
-    // Note: Supabase's password grant expects an email. If the person enters
-    // a phone number here, plug in a lookup against profiles.phone -> email
-    // once that helper is needed; for now this assumes email login.
     const identifier = document.getElementById("identifier").value.trim();
     const password = document.getElementById("password").value;
 
@@ -113,13 +110,8 @@
       window.JWingsDB.saveSession(result);
 
       const profile = await window.JWingsDB.getMyProfile(result.access_token);
-      if (profile && profile.role !== selectedRole) {
-        showError(`This account is registered as a ${profile.role}, not a ${selectedRole}. Switch tabs above and try again.`);
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Log in";
-        return;
-      }
-
+      // Redirect based on the account's real role rather than the tab picked —
+      // this lets customers who've since become vendors log in from either tab.
       window.JWingsDB.redirectForRole(profile ? profile.role : selectedRole);
     } catch (err) {
       showError(err.message || "Couldn't log in. Check your details and try again.");

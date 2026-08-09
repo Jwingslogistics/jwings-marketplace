@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Become a vendor — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/auth.css" />
+<style>
+  .auth-shell { grid-template-columns: 1fr; }
+  .form-panel { padding: 56px 24px; }
+  .form-card { max-width: 480px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+</style>
+</head>
+<body>
+<div class="auth-shell">
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="mobile-logo" style="display:flex; align-items:center; gap:10px; margin-bottom:28px;">
+        <img src="/assets/images/jwings-logo.png" alt="JWings" style="width:32px;height:32px;" />
+        <span style="font-weight:700; color:#1a237e;">JWings Logistics</span>
+      </div>
+
+      <h2>Set up your store</h2>
+      <p class="subtitle">Tell us about your store — you can start listing products right after.</p>
+
+      <div class="error-banner" id="errorBanner"></div>
+
+      <form id="onboardForm">
+        <div class="field">
+          <label for="storeName">Store name</label>
+          <input type="text" id="storeName" placeholder="e.g. Ada's Boutique" required />
+        </div>
+        <div class="field">
+          <label for="description">Short description</label>
+          <input type="text" id="description" placeholder="What do you sell?" />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="city">City</label>
+            <input type="text" id="city" placeholder="e.g. Akure" />
+          </div>
+          <div class="field">
+            <label for="state">State</label>
+            <input type="text" id="state" placeholder="e.g. Ondo" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="currency">Currency you'll sell in</label>
+          <input type="text" id="currency" value="NGN" required />
+          <div class="hint">This is the currency your product prices will be listed in.</div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Create my store</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) {
+    window.location.href = "/customer/login.html";
+  }
+
+  const errorBanner = document.getElementById("errorBanner");
+  function showError(msg) { errorBanner.textContent = msg; errorBanner.classList.add("show"); }
+
+  function slugify(name) {
+    return name.toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") + "-" + Math.floor(Math.random() * 9000 + 1000);
+  }
+
+  document.getElementById("onboardForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBanner.classList.remove("show");
+
+    const storeName = document.getElementById("storeName").value.trim();
+    const description = document.getElementById("description").value.trim();
+    const city = document.getElementById("city").value.trim();
+    const state = document.getElementById("state").value.trim();
+    const currency = document.getElementById("currency").value.trim().toUpperCase() || "NGN";
+
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Setting up...";
+
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      if (!profile) throw new Error("Couldn't find your profile. Please log in again.");
+
+      // Auto-approve for now (vendor approval workflow can be added later).
+      await window.JWingsDB.insert("vendors", {
+        profile_id: profile.id,
+        store_name: storeName,
+        store_slug: slugify(storeName),
+        description: description || null,
+        city: city || null,
+        state: state || null,
+        currency: currency,
+        status: "active",
+      }, session.access_token);
+
+      await window.JWingsDB.update("profiles", `id=eq.${profile.id}`, { role: "vendor" }, session.access_token);
+
+      window.location.href = "/vendor/dashboard.html";
+    } catch (err) {
+      showError(err.message || "Something went wrong setting up your store.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create my store";
+    }
+  });
+</script>
+</body>
+</html>
