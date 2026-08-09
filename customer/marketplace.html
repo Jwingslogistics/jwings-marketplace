@@ -43,6 +43,15 @@
   .nav-links a.link:hover { color: var(--navy-700); }
   .nav-cta { padding: 9px 18px; background: var(--navy-700); color: var(--white); border-radius: 8px; font-size: 13.5px; font-weight: 600; }
   .nav-cta:hover { background: var(--navy-900); }
+  .cart-link { position: relative; }
+  .cart-badge {
+    position: absolute; top: -8px; right: -12px;
+    background: var(--orange-500); color: var(--white);
+    font-size: 10.5px; font-weight: 700; border-radius: 999px;
+    min-width: 17px; height: 17px; display: none;
+    align-items: center; justify-content: center; padding: 0 4px;
+  }
+  .cart-badge.show { display: flex; }
   .search-box {
     flex: 1; max-width: 420px; margin: 0 24px;
     display: flex; align-items: center; gap: 8px;
@@ -142,6 +151,7 @@
     <input type="text" id="searchInput" placeholder="Search products, vendors..." />
   </div>
   <div class="nav-links">
+    <a class="link cart-link" href="/customer/cart.html">Cart<span class="cart-badge" id="cartBadge">0</span></a>
     <a class="link" href="/customer/dashboard.html">My orders</a>
     <a class="link" href="/customer/login.html">Log in</a>
     <a class="nav-cta" href="/customer/signup.html">Sign up</a>
@@ -312,7 +322,22 @@
     renderProducts();
   });
 
+  async function refreshCartBadge() {
+    const session = window.JWingsDB.getSession();
+    if (!session) return;
+    try {
+      const items = await window.JWingsDB.select(
+        "cart_items", `select=quantity&customer_id=eq.${session.user.id}`, session.access_token
+      );
+      const count = items.reduce((sum, i) => sum + i.quantity, 0);
+      const badge = document.getElementById("cartBadge");
+      badge.textContent = count;
+      badge.classList.toggle("show", count > 0);
+    } catch (err) { /* non-critical, ignore */ }
+  }
+
   loadData();
+  refreshCartBadge();
 </script>
 </body>
 </html>
