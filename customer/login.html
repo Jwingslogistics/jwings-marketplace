@@ -109,9 +109,16 @@
       const result = await window.JWingsDB.signIn(identifier, password);
       window.JWingsDB.saveSession(result);
 
+      // If the person was sent here from a specific page (e.g. Book a Delivery),
+      // return them there instead of always routing by account role.
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get("redirect");
+      if (redirectTo) {
+        window.location.href = redirectTo;
+        return;
+      }
+
       const profile = await window.JWingsDB.getMyProfile(result.access_token);
-      // Redirect based on the account's real role rather than the tab picked —
-      // this lets customers who've since become vendors log in from either tab.
       window.JWingsDB.redirectForRole(profile ? profile.role : selectedRole);
     } catch (err) {
       showError(err.message || "Couldn't log in. Check your details and try again.");

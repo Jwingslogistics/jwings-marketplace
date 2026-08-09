@@ -196,7 +196,7 @@
 <script src="/shared/supabase-client.js"></script>
 <script>
   const session = window.JWingsDB.getSession();
-  if (!session) window.location.href = "/customer/login.html";
+  if (!session) window.location.href = "/customer/login.html?redirect=/customer/book-delivery.html";
 
   let selectedPackageType = "document";
   let selectedFee = 1500;
