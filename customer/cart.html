@@ -3,239 +3,187 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Your cart — JWings Logistics</title>
+<title>Your Cart — JWings Logistics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
     --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
-    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --danger: #d64545; --success: #1e9e6a;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff;
     --font-display: "Fraunces", Georgia, serif;
     --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
-  img { max-width: 100%; display: block; }
-  a { color: inherit; text-decoration: none; }
+  a { text-decoration: none; color: inherit; }
 
   .nav {
     position: sticky; top: 0; z-index: 50;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 6vw; background: rgba(247,248,252,0.92); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--line);
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
   }
   .nav-logo { display: flex; align-items: center; gap: 10px; }
   .nav-logo img { width: 30px; height: 30px; }
   .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
-  .nav-links { display: flex; align-items: center; gap: 22px; }
-  .nav-links a.link { font-size: 14px; font-weight: 500; color: var(--ink); }
-  .nav-links a.link:hover { color: var(--navy-700); }
+  .nav-links a { font-size: 14px; font-weight: 500; }
 
-  .page-head { padding: 36px 6vw 8px; }
-  .page-head h1 { font-family: var(--font-display); font-size: clamp(24px, 3vw, 30px); color: var(--navy-900); font-weight: 600; }
+  .page-head { padding: 32px 6vw 8px; }
+  .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
 
   .cart-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; padding: 20px 6vw 72px; align-items: start; }
   @media (max-width: 860px) { .cart-layout { grid-template-columns: 1fr; } }
 
-  .vendor-group { background: var(--white); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 20px; overflow: hidden; }
-  .vendor-group-head { padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 700; color: var(--navy-900); }
-  .cart-row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
-  .cart-row:last-child { border-bottom: none; }
-  .cart-thumb { width: 64px; height: 64px; border-radius: 10px; background: var(--bg); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
-  .cart-thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .cart-info { flex: 1; min-width: 0; }
-  .cart-name { font-size: 14.5px; font-weight: 600; margin-bottom: 4px; }
-  .cart-price { font-size: 13.5px; color: var(--muted); }
-  .cart-controls { display: flex; align-items: center; gap: 14px; }
-  .qty-stepper { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
-  .qty-stepper button { width: 30px; height: 32px; border: none; background: var(--white); font-size: 15px; cursor: pointer; color: var(--navy-700); }
-  .qty-stepper button:hover { background: var(--bg); }
-  .qty-stepper span { width: 32px; text-align: center; font-size: 13.5px; }
-  .remove-btn { background: none; border: none; color: var(--danger); font-size: 12.5px; font-weight: 600; cursor: pointer; }
-  .remove-btn:hover { text-decoration: underline; }
-  .line-total { font-size: 14px; font-weight: 700; color: var(--navy-900); width: 90px; text-align: right; }
+  .cart-item {
+    display: flex; gap: 16px; background: var(--white); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px; margin-bottom: 14px; align-items: center;
+  }
+  .item-thumb {
+    width: 72px; height: 72px; border-radius: 10px; background: var(--bg); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 26px; overflow: hidden;
+  }
+  .item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .item-info { flex: 1; min-width: 0; }
+  .item-vendor { font-size: 11.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+  .item-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .item-price { font-size: 13.5px; color: var(--muted); }
+  .item-controls { display: flex; align-items: center; gap: 14px; }
+  .qty-control { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .qty-control button { width: 30px; height: 30px; background: var(--white); border: none; font-size: 14px; cursor: pointer; color: var(--navy-700); }
+  .qty-control button:hover { background: var(--bg); }
+  .qty-control span { width: 30px; text-align: center; font-size: 13.5px; font-weight: 600; }
+  .remove-btn { background: none; border: none; color: #d64545; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: var(--font-body); }
+  .item-total { font-family: var(--font-display); font-size: 15.5px; color: var(--navy-900); font-weight: 600; min-width: 80px; text-align: right; }
 
-  .summary-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 22px; position: sticky; top: 84px; }
-  .summary-card h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 16px; }
-  .summary-row { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--muted); margin-bottom: 10px; }
-  .summary-total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: var(--navy-900); margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .summary-panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; position: sticky; top: 84px; }
+  .summary-panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 18px; }
+  .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 12px; color: var(--muted); }
+  .summary-row.total { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 6px; font-size: 16px; font-weight: 700; color: var(--navy-900); }
+  .summary-note { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 16px; }
   .checkout-btn {
-    width: 100%; margin-top: 18px; padding: 13px 0; background: var(--orange-500); color: var(--white);
-    border: none; border-radius: 10px; font-weight: 700; font-size: 14.5px; cursor: pointer; font-family: var(--font-body);
+    width: 100%; padding: 14px 0; background: var(--orange-500); color: var(--white); border: none;
+    border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: var(--font-body);
   }
   .checkout-btn:hover { background: #e06f00; }
   .checkout-btn:disabled { background: #f3b877; cursor: not-allowed; }
-  .summary-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 
-  .empty-state {
-    grid-column: 1 / -1; background: var(--white); border: 1px dashed var(--line); border-radius: 16px;
-    padding: 64px 32px; text-align: center;
-  }
-  .empty-state .icon { font-size: 40px; margin-bottom: 16px; }
-  .empty-state h3 { font-family: var(--font-display); font-size: 20px; color: var(--navy-900); margin-bottom: 8px; }
-  .empty-state p { color: var(--muted); font-size: 14.5px; max-width: 380px; margin: 0 auto 20px; line-height: 1.55; }
-  .empty-state a { display: inline-block; background: var(--orange-500); color: var(--white); padding: 11px 22px; border-radius: 9px; font-weight: 700; font-size: 14px; }
-  .empty-state a:hover { background: #e06f00; }
-  .center-msg { padding: 100px 6vw; text-align: center; color: var(--muted); }
+  .empty-cart { grid-column: 1 / -1; text-align: center; padding: 80px 20px; background: var(--white); border: 1px dashed var(--line); border-radius: 16px; }
+  .empty-cart .icon { font-size: 40px; margin-bottom: 16px; }
+  .empty-cart h3 { font-family: var(--font-display); font-size: 20px; color: var(--navy-900); margin-bottom: 8px; }
+  .empty-cart p { color: var(--muted); font-size: 14.5px; margin-bottom: 20px; }
+  .empty-cart a { display: inline-block; background: var(--orange-500); color: var(--white); padding: 11px 22px; border-radius: 9px; font-weight: 700; font-size: 14px; }
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <div class="nav-logo">
+  <a class="nav-logo" href="/">
     <img src="/assets/images/jwings-logo.png" alt="JWings" />
     <span>JWings Logistics</span>
-  </div>
+  </a>
   <div class="nav-links">
-    <a class="link" href="/customer/marketplace.html">Marketplace</a>
-    <a class="link" href="/customer/dashboard.html">My orders</a>
+    <a href="/customer/marketplace.html">Continue shopping</a>
   </div>
 </nav>
 
-<div class="page-head"><h1>Your cart</h1></div>
+<div class="page-head">
+  <h1>Your Cart</h1>
+</div>
 
-<div id="pageBody">
-  <div class="center-msg">Loading your cart...</div>
+<div class="cart-layout" id="cartLayout">
+  <div id="itemsList"></div>
+  <div class="summary-panel" id="summaryPanel" style="display:none;">
+    <h3>Order Summary</h3>
+    <div class="summary-row"><span>Subtotal</span><span id="sumSubtotal">₦0</span></div>
+    <div class="summary-note">Delivery and service fees are calculated at checkout.</div>
+    <button class="checkout-btn" id="checkoutBtn">Proceed to checkout</button>
+  </div>
 </div>
 
 <script src="/shared/supabase-client.js"></script>
 <script>
-  const session = window.JWingsDB.getSession();
-  if (!session) {
-    sessionStorage.setItem("jwings_redirect_after_login", window.location.href);
-    window.location.href = "/customer/login.html";
+  function getCart() {
+    try { return JSON.parse(localStorage.getItem("jwings_cart") || "[]"); }
+    catch { return []; }
   }
-
+  function saveCart(cart) {
+    localStorage.setItem("jwings_cart", JSON.stringify(cart));
+  }
   function money(amount, currency) {
     const symbol = currency === "NGN" ? "₦" : (currency || "");
-    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+    return `${symbol}${Number(amount).toLocaleString()}`;
   }
 
-  async function loadCart() {
-    try {
-      const items = await window.JWingsDB.select(
-        "cart_items",
-        `select=*,products(id,name,price,currency,stock,images,vendor_id,vendors(id,store_name))&customer_id=eq.${session.user.id}&order=created_at.desc`,
-        session.access_token
-      );
+  function render() {
+    const cart = getCart();
+    const itemsList = document.getElementById("itemsList");
+    const summaryPanel = document.getElementById("summaryPanel");
 
-      renderCart(items.filter(i => i.products)); // drop any orphaned rows (product deleted)
-    } catch (err) {
-      document.getElementById("pageBody").innerHTML = `<div class="center-msg">Couldn't load your cart right now. Please refresh.</div>`;
-    }
-  }
-
-  function renderCart(items) {
-    const body = document.getElementById("pageBody");
-
-    if (items.length === 0) {
-      body.innerHTML = `
-        <div style="padding: 20px 6vw 72px;">
-          <div class="empty-state">
-            <div class="icon">🛒</div>
-            <h3>Your cart is empty</h3>
-            <p>Browse the marketplace and add something you like — it'll show up here.</p>
-            <a href="/customer/marketplace.html">Go to marketplace</a>
-          </div>
+    if (cart.length === 0) {
+      itemsList.innerHTML = `
+        <div class="empty-cart">
+          <div class="icon">🛒</div>
+          <h3>Your cart is empty</h3>
+          <p>Browse the marketplace to find something you'll love.</p>
+          <a href="/customer/marketplace.html">Start shopping</a>
         </div>`;
+      summaryPanel.style.display = "none";
       return;
     }
 
-    // Group by vendor for display and because checkout/order_items are per-vendor lines.
-    const byVendor = {};
-    items.forEach(i => {
-      const vId = i.products.vendor_id;
-      if (!byVendor[vId]) byVendor[vId] = { vendorName: i.products.vendors ? i.products.vendors.store_name : "JWings Vendor", items: [] };
-      byVendor[vId].items.push(i);
-    });
+    summaryPanel.style.display = "block";
 
-    let subtotal = 0;
-    const groupsHtml = Object.values(byVendor).map(group => {
-      const rows = group.items.map(i => {
-        const p = i.products;
-        const lineTotal = p.price * i.quantity;
-        subtotal += lineTotal;
-        const thumb = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.name}" />` : "📦";
-        return `
-          <div class="cart-row" data-cart-id="${i.id}" data-stock="${p.stock}">
-            <div class="cart-thumb">${thumb}</div>
-            <div class="cart-info">
-              <div class="cart-name">${p.name}</div>
-              <div class="cart-price">${money(p.price, p.currency)} each</div>
-            </div>
-            <div class="cart-controls">
-              <div class="qty-stepper">
-                <button type="button" class="qty-minus">−</button>
-                <span class="qty-value">${i.quantity}</span>
-                <button type="button" class="qty-plus">+</button>
-              </div>
-              <div class="line-total">${money(lineTotal, p.currency)}</div>
-              <button type="button" class="remove-btn">Remove</button>
-            </div>
-          </div>`;
-      }).join("");
-
+    itemsList.innerHTML = cart.map((item, idx) => {
+      const thumb = item.image ? `<img src="${item.image}" alt="${item.name}" />` : "📦";
       return `
-        <div class="vendor-group">
-          <div class="vendor-group-head">${group.vendorName}</div>
-          ${rows}
+        <div class="cart-item">
+          <div class="item-thumb">${thumb}</div>
+          <div class="item-info">
+            <div class="item-vendor">${item.vendor_name}</div>
+            <div class="item-name">${item.name}</div>
+            <div class="item-price">${money(item.price, item.currency)} each</div>
+          </div>
+          <div class="item-controls">
+            <div class="qty-control">
+              <button data-idx="${idx}" data-action="minus" type="button">−</button>
+              <span>${item.quantity}</span>
+              <button data-idx="${idx}" data-action="plus" type="button">+</button>
+            </div>
+            <button class="remove-btn" data-idx="${idx}" data-action="remove" type="button">Remove</button>
+          </div>
+          <div class="item-total">${money(item.price * item.quantity, item.currency)}</div>
         </div>`;
     }).join("");
 
-    const currency = items[0].products.currency;
+    const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const currency = cart[0].currency;
+    document.getElementById("sumSubtotal").textContent = money(subtotal, currency);
 
-    body.innerHTML = `
-      <div class="cart-layout">
-        <div>${groupsHtml}</div>
-        <div class="summary-card">
-          <h3>Order summary</h3>
-          <div class="summary-row"><span>Subtotal</span><span id="subtotalVal">${money(subtotal, currency)}</span></div>
-          <div class="summary-row"><span>Delivery</span><span>Calculated at checkout</span></div>
-          <div class="summary-total"><span>Total</span><span id="totalVal">${money(subtotal, currency)}</span></div>
-          <button class="checkout-btn" id="checkoutBtn">Proceed to checkout</button>
-          <p class="summary-note">Every order is delivered by JWings. Delivery fee depends on the speed you choose at checkout.</p>
-        </div>
-      </div>`;
-
-    wireUpRows();
-    document.getElementById("checkoutBtn").addEventListener("click", () => {
-      window.location.href = "/customer/checkout.html";
+    itemsList.querySelectorAll("[data-action]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.getAttribute("data-idx"), 10);
+        const action = btn.getAttribute("data-action");
+        const cart = getCart();
+        if (action === "plus" && cart[idx].quantity < cart[idx].stock) cart[idx].quantity++;
+        if (action === "minus") { cart[idx].quantity--; if (cart[idx].quantity <= 0) cart.splice(idx, 1); }
+        if (action === "remove") cart.splice(idx, 1);
+        saveCart(cart);
+        render();
+      });
     });
   }
 
-  function wireUpRows() {
-    document.querySelectorAll(".cart-row").forEach(row => {
-      const cartId = row.getAttribute("data-cart-id");
-      const stock = parseInt(row.getAttribute("data-stock"), 10);
-      const qtyValue = row.querySelector(".qty-value");
-      const minus = row.querySelector(".qty-minus");
-      const plus = row.querySelector(".qty-plus");
-      const removeBtn = row.querySelector(".remove-btn");
+  document.getElementById("checkoutBtn").addEventListener("click", () => {
+    const session = window.JWingsDB.getSession();
+    if (!session) {
+      window.location.href = "/customer/login.html";
+      return;
+    }
+    window.location.href = "/customer/checkout.html";
+  });
 
-      async function updateQty(newQty) {
-        if (newQty < 1) return removeItem();
-        if (newQty > stock) newQty = stock;
-        try {
-          await window.JWingsDB.update("cart_items", `id=eq.${cartId}`, { quantity: newQty }, session.access_token);
-          loadCart();
-        } catch (err) { /* leave UI as-is on failure */ }
-      }
-
-      async function removeItem() {
-        try {
-          await window.JWingsDB.remove("cart_items", `id=eq.${cartId}`, session.access_token);
-          loadCart();
-        } catch (err) { /* leave UI as-is on failure */ }
-      }
-
-      minus.addEventListener("click", () => updateQty(parseInt(qtyValue.textContent, 10) - 1));
-      plus.addEventListener("click", () => updateQty(parseInt(qtyValue.textContent, 10) + 1));
-      removeBtn.addEventListener("click", removeItem);
-    });
-  }
-
-  loadCart();
+  render();
 </script>
 </body>
 </html>

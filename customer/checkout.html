@@ -10,319 +10,216 @@
   :root {
     --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
     --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
-    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --danger: #d64545; --success: #1e9e6a;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --danger: #d64545;
     --font-display: "Fraunces", Georgia, serif;
     --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
-  a { color: inherit; text-decoration: none; }
+  a { text-decoration: none; color: inherit; }
 
   .nav {
     position: sticky; top: 0; z-index: 50;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 6vw; background: rgba(247,248,252,0.92); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--line);
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
   }
   .nav-logo { display: flex; align-items: center; gap: 10px; }
   .nav-logo img { width: 30px; height: 30px; }
   .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
-  .nav-links a.link { font-size: 14px; font-weight: 500; color: var(--ink); }
 
-  .page-head { padding: 36px 6vw 8px; }
-  .page-head h1 { font-family: var(--font-display); font-size: clamp(24px, 3vw, 30px); color: var(--navy-900); font-weight: 600; }
+  .page-head { padding: 32px 6vw 8px; }
+  .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
 
   .checkout-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; padding: 20px 6vw 72px; align-items: start; }
   @media (max-width: 860px) { .checkout-layout { grid-template-columns: 1fr; } }
 
-  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
-  .panel h3 { font-family: var(--font-display); font-size: 16.5px; color: var(--navy-900); margin-bottom: 16px; }
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+  .panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 16px; }
 
-  .addr-card {
-    display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1.5px solid var(--line);
-    border-radius: 10px; margin-bottom: 10px; cursor: pointer;
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field input, .field textarea {
+    width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-family: var(--font-body);
   }
-  .addr-card.selected { border-color: var(--navy-500); background: #f6f7fd; }
-  .addr-card input[type="radio"] { margin-top: 3px; }
-  .addr-card .addr-label { font-size: 13.5px; font-weight: 700; color: var(--navy-900); }
-  .addr-card .addr-text { font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
 
-  .add-addr-toggle { background: none; border: none; color: var(--navy-700); font-weight: 600; font-size: 13.5px; cursor: pointer; padding: 6px 0; }
-  .add-addr-toggle:hover { text-decoration: underline; }
-
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
-  .field input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: var(--font-body); }
-  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
+  .delivery-options { display: flex; flex-direction: column; gap: 10px; }
   .delivery-option {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 14px; border: 1.5px solid var(--line); border-radius: 10px; margin-bottom: 10px; cursor: pointer;
+    border: 1.5px solid var(--line); border-radius: 10px; padding: 14px 16px; cursor: pointer;
   }
-  .delivery-option.selected { border-color: var(--navy-500); background: #f6f7fd; }
-  .delivery-option .left { display: flex; align-items: center; gap: 10px; }
-  .delivery-option .name { font-size: 14px; font-weight: 600; }
-  .delivery-option .sub { font-size: 12px; color: var(--muted); }
-  .delivery-option .price { font-size: 13.5px; font-weight: 700; color: var(--navy-900); }
+  .delivery-option.selected { border-color: var(--navy-700); background: #f5f6ff; }
+  .delivery-option .left { display: flex; align-items: center; gap: 12px; }
+  .delivery-option input { accent-color: var(--navy-700); }
+  .delivery-option .label { font-size: 14.5px; font-weight: 600; }
+  .delivery-option .sub { font-size: 12.5px; color: var(--muted); }
+  .delivery-option .fee { font-size: 14px; font-weight: 700; color: var(--navy-900); }
 
-  .summary-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 22px; position: sticky; top: 84px; }
-  .summary-card h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 16px; }
-  .summary-item { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
-  .summary-row { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--muted); margin: 10px 0; }
-  .summary-total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: var(--navy-900); margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .summary-panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; position: sticky; top: 84px; }
+  .summary-panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 18px; }
+  .mini-item { display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 10px; color: var(--ink); }
+  .mini-item .name { color: var(--muted); }
+  .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: var(--muted); }
+  .summary-row.total { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 10px; font-size: 17px; font-weight: 700; color: var(--navy-900); }
+  .divider { border-top: 1px solid var(--line); margin: 14px 0; }
 
   .place-order-btn {
-    width: 100%; margin-top: 18px; padding: 14px 0; background: var(--orange-500); color: var(--white);
-    border: none; border-radius: 10px; font-weight: 700; font-size: 14.5px; cursor: pointer; font-family: var(--font-body);
+    width: 100%; padding: 14px 0; background: var(--orange-500); color: var(--white); border: none;
+    border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: var(--font-body); margin-top: 6px;
   }
   .place-order-btn:hover { background: #e06f00; }
   .place-order-btn:disabled { background: #f3b877; cursor: not-allowed; }
 
-  .payment-note {
-    display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; padding: 12px 14px;
-    background: #fff4e5; border: 1px solid #ffdba3; border-radius: 10px;
-  }
-  .payment-note span.icon { font-size: 16px; }
-  .payment-note p { font-size: 12px; color: #8a5a00; line-height: 1.5; }
-
-  .error-banner { background: #fdecea; color: var(--danger); border: 1px solid #f5c6c2; border-radius: 10px; padding: 11px 14px; font-size: 13.5px; margin-bottom: 16px; display: none; }
+  .error-banner { background: #fdecea; color: var(--danger); border: 1px solid #f5c6c2; border-radius: 10px; padding: 11px 14px; font-size: 13.5px; margin-bottom: 18px; display: none; }
   .error-banner.show { display: block; }
 
-  .center-msg { padding: 100px 6vw; text-align: center; color: var(--muted); }
-
-  /* ---- Success state ---- */
-  .success-shell { max-width: 480px; margin: 60px auto; padding: 0 24px; text-align: center; }
-  .success-icon { font-size: 52px; margin-bottom: 18px; }
-  .success-shell h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); margin-bottom: 10px; }
-  .success-shell p { color: var(--muted); font-size: 14.5px; line-height: 1.6; margin-bottom: 6px; }
-  .order-number-chip {
-    display: inline-block; margin: 16px 0; padding: 10px 20px; background: var(--bg);
-    border: 1px solid var(--line); border-radius: 10px; font-weight: 700; color: var(--navy-900); font-size: 15px;
-  }
-  .success-actions { display: flex; gap: 12px; margin-top: 24px; justify-content: center; }
-  .success-actions a { padding: 11px 20px; border-radius: 9px; font-size: 13.5px; font-weight: 700; }
-  .btn-a { background: var(--orange-500); color: var(--white); }
-  .btn-a:hover { background: #e06f00; }
-  .btn-b { background: var(--white); color: var(--navy-700); border: 1px solid var(--line); }
+  .confirm-state { text-align: center; padding: 80px 20px; }
+  .confirm-state .icon { font-size: 48px; margin-bottom: 18px; }
+  .confirm-state h2 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); margin-bottom: 10px; }
+  .confirm-state p { color: var(--muted); font-size: 15px; margin-bottom: 24px; }
+  .confirm-state a { display: inline-block; background: var(--orange-500); color: var(--white); padding: 12px 24px; border-radius: 10px; font-weight: 700; }
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <div class="nav-logo">
+  <a class="nav-logo" href="/">
     <img src="/assets/images/jwings-logo.png" alt="JWings" />
     <span>JWings Logistics</span>
-  </div>
-  <div class="nav-links"><a class="link" href="/customer/cart.html">Back to cart</a></div>
+  </a>
 </nav>
 
-<div id="pageBody">
-  <div class="center-msg">Loading checkout...</div>
+<div class="page-head">
+  <h1>Checkout</h1>
+</div>
+
+<div id="pageContent">
+  <div class="checkout-layout">
+    <div>
+      <div class="panel">
+        <h3>Delivery address</h3>
+        <div class="error-banner" id="errorBanner"></div>
+        <div class="field">
+          <label for="fullAddress">Full delivery address</label>
+          <textarea id="fullAddress" rows="2" placeholder="Street, area, landmark..." required></textarea>
+        </div>
+        <div class="field">
+          <label for="city">City</label>
+          <input type="text" id="city" placeholder="e.g. Akure" required />
+        </div>
+        <div class="field">
+          <label for="state">State</label>
+          <input type="text" id="state" placeholder="e.g. Ondo" required />
+        </div>
+        <div class="field">
+          <label for="orderNotes">Order notes (optional)</label>
+          <textarea id="orderNotes" rows="2" placeholder="Any delivery instructions?"></textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Delivery speed</h3>
+        <div class="delivery-options" id="deliveryOptions">
+          <label class="delivery-option selected" data-fee="1500">
+            <span class="left"><input type="radio" name="deliveryType" value="standard" checked />
+              <span><span class="label">Standard</span><br/><span class="sub">2–3 business days</span></span>
+            </span>
+            <span class="fee">₦1,500</span>
+          </label>
+          <label class="delivery-option" data-fee="2500">
+            <span class="left"><input type="radio" name="deliveryType" value="express" />
+              <span><span class="label">Express</span><br/><span class="sub">Next-day delivery</span></span>
+            </span>
+            <span class="fee">₦2,500</span>
+          </label>
+          <label class="delivery-option" data-fee="4000">
+            <span class="left"><input type="radio" name="deliveryType" value="same_day" />
+              <span><span class="label">Same-day</span><br/><span class="sub">Delivered today</span></span>
+            </span>
+            <span class="fee">₦4,000</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-panel">
+      <h3>Order Summary</h3>
+      <div id="miniItems"></div>
+      <div class="divider"></div>
+      <div class="summary-row"><span>Subtotal</span><span id="sumSubtotal">₦0</span></div>
+      <div class="summary-row"><span>Delivery fee</span><span id="sumDelivery">₦1,500</span></div>
+      <div class="summary-row"><span>Service fee</span><span id="sumService">₦500</span></div>
+      <div class="summary-row total"><span>Total</span><span id="sumTotal">₦0</span></div>
+      <button class="place-order-btn" id="placeOrderBtn">Place order</button>
+    </div>
+  </div>
 </div>
 
 <script src="/shared/supabase-client.js"></script>
 <script>
+  const SERVICE_FEE = 500;
+  let selectedFee = 1500;
+  let selectedDeliveryType = "standard";
+
   const session = window.JWingsDB.getSession();
-  if (!session) {
-    sessionStorage.setItem("jwings_redirect_after_login", window.location.href);
-    window.location.href = "/customer/login.html";
+  if (!session) window.location.href = "/customer/login.html";
+
+  function getCart() {
+    try { return JSON.parse(localStorage.getItem("jwings_cart") || "[]"); }
+    catch { return []; }
   }
-
-  // Placeholder flat delivery fees by speed. Real distance/vendor-based
-  // pricing can replace this once that logic exists — kept isolated here
-  // so it's a single easy swap later.
-  const DELIVERY_OPTIONS = [
-    { value: "standard",  label: "Standard",  sub: "2–4 business days", fee: 1500 },
-    { value: "express",   label: "Express",   sub: "Next day",          fee: 3000 },
-    { value: "same_day",  label: "Same day",  sub: "Delivered today",   fee: 5000 },
-    { value: "pickup",    label: "Pickup",    sub: "Collect from vendor", fee: 0 },
-  ];
-
-  let cartItems = [];
-  let addresses = [];
-  let selectedAddressId = null;
-  let selectedDelivery = "standard";
-  let currency = "NGN";
-
-  function money(amount) {
+  function money(amount, currency) {
     const symbol = currency === "NGN" ? "₦" : (currency || "");
-    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+    return `${symbol}${Number(amount).toLocaleString()}`;
   }
 
-  async function init() {
-    try {
-      const [items, addrs] = await Promise.all([
-        window.JWingsDB.select(
-          "cart_items",
-          `select=*,products(id,name,price,currency,stock,vendor_id)&customer_id=eq.${session.user.id}`,
-          session.access_token
-        ),
-        window.JWingsDB.select("addresses", `select=*&user_id=eq.${session.user.id}&order=is_default.desc`, session.access_token),
-      ]);
-
-      cartItems = items.filter(i => i.products);
-      addresses = addrs;
-
-      if (cartItems.length === 0) {
-        window.location.href = "/customer/cart.html";
-        return;
-      }
-
-      currency = cartItems[0].products.currency;
-      selectedAddressId = addresses.find(a => a.is_default) ? addresses.find(a => a.is_default).id : (addresses[0] ? addresses[0].id : null);
-
-      render();
-    } catch (err) {
-      document.getElementById("pageBody").innerHTML = `<div class="center-msg">Couldn't load checkout right now. Please refresh.</div>`;
-    }
+  const cart = getCart();
+  if (cart.length === 0) {
+    window.location.href = "/customer/cart.html";
   }
 
-  function subtotal() {
-    return cartItems.reduce((sum, i) => sum + i.products.price * i.quantity, 0);
-  }
+  function renderSummary() {
+    const currency = cart[0].currency;
+    const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const total = subtotal + selectedFee + SERVICE_FEE;
 
-  function deliveryFee() {
-    const opt = DELIVERY_OPTIONS.find(o => o.value === selectedDelivery);
-    return opt ? opt.fee : 0;
-  }
-
-  function render() {
-    const addressCards = addresses.map(a => `
-      <label class="addr-card ${a.id === selectedAddressId ? "selected" : ""}" data-addr-id="${a.id}">
-        <input type="radio" name="addr" value="${a.id}" ${a.id === selectedAddressId ? "checked" : ""} />
-        <div>
-          <div class="addr-label">${a.label || "Address"}</div>
-          <div class="addr-text">${a.full_address}${a.city ? ", " + a.city : ""}${a.state ? ", " + a.state : ""}</div>
-        </div>
-      </label>`).join("");
-
-    const deliveryOptionsHtml = DELIVERY_OPTIONS.map(o => `
-      <label class="delivery-option ${o.value === selectedDelivery ? "selected" : ""}" data-delivery="${o.value}">
-        <div class="left">
-          <input type="radio" name="delivery" value="${o.value}" ${o.value === selectedDelivery ? "checked" : ""} />
-          <div>
-            <div class="name">${o.label}</div>
-            <div class="sub">${o.sub}</div>
-          </div>
-        </div>
-        <div class="price">${o.fee === 0 ? "Free" : money(o.fee)}</div>
-      </label>`).join("");
-
-    const itemsSummary = cartItems.map(i => `
-      <div class="summary-item">
-        <span>${i.products.name} × ${i.quantity}</span>
-        <span>${money(i.products.price * i.quantity)}</span>
+    document.getElementById("miniItems").innerHTML = cart.map(i => `
+      <div class="mini-item">
+        <span class="name">${i.name} × ${i.quantity}</span>
+        <span>${money(i.price * i.quantity, i.currency)}</span>
       </div>`).join("");
 
-    const sub = subtotal();
-    const fee = deliveryFee();
-    const total = sub + fee;
-
-    document.getElementById("pageBody").innerHTML = `
-      <div class="page-head"><h1>Checkout</h1></div>
-      <div class="checkout-layout">
-        <div>
-          <div class="panel">
-            <h3>Delivery address</h3>
-            <div class="error-banner" id="addrError"></div>
-            <div id="addressList">
-              ${addresses.length ? addressCards : `<p style="font-size:13.5px; color:#666a80; margin-bottom:12px;">You don't have any saved addresses yet.</p>`}
-            </div>
-            <button type="button" class="add-addr-toggle" id="toggleAddAddr">+ Add a new address</button>
-            <form id="newAddrForm" style="display:none; margin-top:14px;">
-              <div class="field"><label>Label</label><input type="text" id="newAddrLabel" placeholder="e.g. Home, Office" value="Home" /></div>
-              <div class="field"><label>Full address</label><input type="text" id="newAddrFull" placeholder="Street, building, landmark" required /></div>
-              <div class="row-2">
-                <div class="field"><label>City</label><input type="text" id="newAddrCity" /></div>
-                <div class="field"><label>State</label><input type="text" id="newAddrState" /></div>
-              </div>
-              <button type="submit" class="add-addr-toggle" style="color:#f57c00;">Save address</button>
-            </form>
-          </div>
-
-          <div class="panel">
-            <h3>Delivery speed</h3>
-            ${deliveryOptionsHtml}
-          </div>
-        </div>
-
-        <div class="summary-card">
-          <h3>Order summary</h3>
-          ${itemsSummary}
-          <div class="summary-row"><span>Subtotal</span><span>${money(sub)}</span></div>
-          <div class="summary-row"><span>Delivery</span><span>${fee === 0 ? "Free" : money(fee)}</span></div>
-          <div class="summary-total"><span>Total</span><span>${money(total)}</span></div>
-          <button class="place-order-btn" id="placeOrderBtn">Place order</button>
-          <div class="payment-note">
-            <span class="icon">ℹ️</span>
-            <p>Card payment isn't set up yet — your order will be placed as <strong>pay on delivery</strong>. We'll email you once online payment is ready.</p>
-          </div>
-        </div>
-      </div>`;
-
-    wireUpForm();
+    document.getElementById("sumSubtotal").textContent = money(subtotal, currency);
+    document.getElementById("sumDelivery").textContent = money(selectedFee, currency);
+    document.getElementById("sumService").textContent = money(SERVICE_FEE, currency);
+    document.getElementById("sumTotal").textContent = money(total, currency);
   }
 
-  function wireUpForm() {
-    document.querySelectorAll(".addr-card").forEach(card => {
-      card.addEventListener("click", () => {
-        selectedAddressId = card.getAttribute("data-addr-id");
-        render();
-      });
+  document.querySelectorAll(".delivery-option").forEach((el) => {
+    el.addEventListener("click", () => {
+      document.querySelectorAll(".delivery-option").forEach(o => o.classList.remove("selected"));
+      el.classList.add("selected");
+      el.querySelector("input").checked = true;
+      selectedFee = parseInt(el.getAttribute("data-fee"), 10);
+      selectedDeliveryType = el.querySelector("input").value;
+      renderSummary();
     });
-    document.querySelectorAll(".delivery-option").forEach(opt => {
-      opt.addEventListener("click", () => {
-        selectedDelivery = opt.getAttribute("data-delivery");
-        render();
-      });
-    });
+  });
 
-    const toggleBtn = document.getElementById("toggleAddAddr");
-    const form = document.getElementById("newAddrForm");
-    toggleBtn.addEventListener("click", () => {
-      form.style.display = form.style.display === "none" ? "block" : "none";
-    });
+  const errorBanner = document.getElementById("errorBanner");
+  function showError(msg) { errorBanner.textContent = msg; errorBanner.classList.add("show"); }
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const fullAddress = document.getElementById("newAddrFull").value.trim();
-      if (!fullAddress) return;
+  document.getElementById("placeOrderBtn").addEventListener("click", async () => {
+    errorBanner.classList.remove("show");
 
-      try {
-        const [created] = await window.JWingsDB.insert("addresses", {
-          user_id: session.user.id,
-          label: document.getElementById("newAddrLabel").value.trim() || "Home",
-          full_address: fullAddress,
-          city: document.getElementById("newAddrCity").value.trim() || null,
-          state: document.getElementById("newAddrState").value.trim() || null,
-          is_default: addresses.length === 0,
-        }, session.access_token);
+    const fullAddress = document.getElementById("fullAddress").value.trim();
+    const city = document.getElementById("city").value.trim();
+    const state = document.getElementById("state").value.trim();
+    const orderNotes = document.getElementById("orderNotes").value.trim();
 
-        addresses.push(created);
-        selectedAddressId = created.id;
-        render();
-      } catch (err) {
-        const errEl = document.getElementById("addrError");
-        errEl.textContent = "Couldn't save that address. Please try again.";
-        errEl.classList.add("show");
-      }
-    });
-
-    document.getElementById("placeOrderBtn").addEventListener("click", placeOrder);
-  }
-
-  function generateOrderNumber() {
-    return "JW" + Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 90 + 10);
-  }
-
-  async function placeOrder() {
-    const errEl = document.getElementById("addrError");
-    errEl.classList.remove("show");
-
-    if (!selectedAddressId && selectedDelivery !== "pickup") {
-      errEl.textContent = "Please select or add a delivery address.";
-      errEl.classList.add("show");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (!fullAddress || !city || !state) {
+      showError("Please fill in your full delivery address, city, and state.");
       return;
     }
 
@@ -330,72 +227,71 @@
     btn.disabled = true;
     btn.textContent = "Placing order...";
 
-    const sub = subtotal();
-    const fee = deliveryFee();
-    const total = sub + fee;
-
     try {
-      const [order] = await window.JWingsDB.insert("orders", {
-        order_number: generateOrderNumber(),
-        customer_id: session.user.id,
-        delivery_address_id: selectedDelivery === "pickup" ? null : selectedAddressId,
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      const currency = cart[0].currency;
+      const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      const total = subtotal + selectedFee + SERVICE_FEE;
+      const orderNumber = "JW" + Date.now().toString().slice(-8);
+
+      // Save the delivery address for this order.
+      const addresses = await window.JWingsDB.insert("addresses", {
+        user_id: profile.id,
+        label: "Delivery",
+        full_address: fullAddress,
+        city, state,
+        is_default: false,
+      }, session.access_token);
+      const address = addresses[0];
+
+      // Create the order.
+      const orders = await window.JWingsDB.insert("orders", {
+        order_number: orderNumber,
+        customer_id: profile.id,
+        delivery_address_id: address.id,
         buyer_currency: currency,
-        fx_rate_to_buyer: 1, // single-currency assumption for now — see note in README/handoff
-        subtotal: sub,
-        delivery_fee: fee,
-        service_fee: 0,
-        total: total,
-        delivery_type: selectedDelivery,
+        fx_rate_to_buyer: 1,
+        subtotal, delivery_fee: selectedFee, service_fee: SERVICE_FEE, total,
+        delivery_type: selectedDeliveryType,
+        order_notes: orderNotes || null,
         status: "new",
         payment_status: "unpaid",
-        payment_method: "cash_on_delivery",
       }, session.access_token);
+      const order = orders[0];
 
-      const orderItemsPayload = cartItems.map(i => ({
-        order_id: order.id,
-        vendor_id: i.products.vendor_id,
-        product_id: i.products.id,
-        product_name: i.products.name,
-        quantity: i.quantity,
-        unit_price: i.products.price,
-        vendor_currency: i.products.currency,
-        unit_price_buyer_currency: i.products.price,
-        line_total_buyer_currency: i.products.price * i.quantity,
-        variant: i.variant || null,
-        vendor_order_status: "new",
-      }));
+      // Create one order_item per cart line.
+      for (const item of cart) {
+        await window.JWingsDB.insert("order_items", {
+          order_id: order.id,
+          vendor_id: item.vendor_id,
+          product_id: item.product_id,
+          product_name: item.name,
+          quantity: item.quantity,
+          unit_price: item.price,
+          vendor_currency: item.currency,
+          unit_price_buyer_currency: item.price,
+          line_total_buyer_currency: item.price * item.quantity,
+          vendor_order_status: "new",
+        }, session.access_token);
+      }
 
-      await window.JWingsDB.insert("order_items", orderItemsPayload, session.access_token);
+      localStorage.removeItem("jwings_cart");
 
-      // Clear the cart now that the order exists.
-      await window.JWingsDB.remove("cart_items", `customer_id=eq.${session.user.id}`, session.access_token);
-
-      showSuccess(order.order_number);
+      document.getElementById("pageContent").innerHTML = `
+        <div class="confirm-state">
+          <div class="icon">🎉</div>
+          <h2>Order placed!</h2>
+          <p>Order <strong>${orderNumber}</strong> has been sent to the vendor. You'll be able to track it from your dashboard.</p>
+          <a href="/customer/dashboard.html">Go to my dashboard</a>
+        </div>`;
     } catch (err) {
-      errEl.textContent = err.message || "Couldn't place your order. Please try again.";
-      errEl.classList.add("show");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      showError(err.message || "Something went wrong placing your order. Please try again.");
       btn.disabled = false;
       btn.textContent = "Place order";
     }
-  }
+  });
 
-  function showSuccess(orderNumber) {
-    document.getElementById("pageBody").innerHTML = `
-      <div class="success-shell">
-        <div class="success-icon">📦</div>
-        <h1>Order placed!</h1>
-        <p>Thanks — your order is in. You'll pay on delivery for now; we'll let you know as soon as online payment is ready.</p>
-        <div class="order-number-chip">${orderNumber}</div>
-        <p>Your vendor(s) have been notified and will start preparing your order.</p>
-        <div class="success-actions">
-          <a class="btn-a" href="/customer/dashboard.html">View my orders</a>
-          <a class="btn-b" href="/customer/marketplace.html">Continue shopping</a>
-        </div>
-      </div>`;
-  }
-
-  init();
+  renderSummary();
 </script>
 </body>
 </html>
