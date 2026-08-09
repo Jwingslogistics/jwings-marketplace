@@ -59,6 +59,17 @@ async function dbDelete(table, query, accessToken = null) {
   return true;
 }
 
+// Calls a Postgres function exposed via PostgREST (e.g. track_shipment).
+async function dbRpc(fnName, args = {}, accessToken = null) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) throw new Error(`RPC failed on ${fnName}: ${res.status}`);
+  return res.json();
+}
+
 // ---- Storage helper ---------------------------------------------------
 
 // Uploads a file to Supabase Storage and returns its public URL.
@@ -174,6 +185,7 @@ window.JWingsDB = {
   insert: dbInsert,
   update: dbUpdate,
   remove: dbDelete,
+  rpc: dbRpc,
   uploadFile,
   signUp,
   signIn,

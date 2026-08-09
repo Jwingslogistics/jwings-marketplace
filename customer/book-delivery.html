@@ -285,7 +285,8 @@
           <p>Your tracking number is:</p>
           <div class="tracking-code">${shipment.tracking_id}</div>
           <p>Save this code to track your package's journey.</p>
-          <a href="/customer/dashboard.html">Go to my dashboard</a>
+          <a href="/customer/track.html?code=${shipment.tracking_id}" style="margin-right:10px;">Track this delivery</a>
+          <a href="/customer/dashboard.html" style="background:transparent; color:#1a237e; border:1.5px solid #1a237e;">My dashboard</a>
         </div>`;
     } catch (err) {
       showError(err.message || "Something went wrong booking this delivery. Please try again.");

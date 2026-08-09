@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Track Your Order — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --danger: #d64545; --success: #1e9e6a;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo img { width: 30px; height: 30px; }
+  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
+
+  .hero-search {
+    padding: 56px 6vw 40px; text-align: center;
+    background: linear-gradient(160deg, var(--navy-900), var(--navy-700));
+  }
+  .hero-search .eyebrow { color: var(--orange-500); font-size: 12.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; margin-bottom: 10px; }
+  .hero-search h1 { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 34px); color: var(--white); margin-bottom: 24px; }
+
+  .search-box {
+    max-width: 480px; margin: 0 auto; display: flex; gap: 10px; background: var(--white);
+    padding: 6px; border-radius: 12px; box-shadow: 0 20px 40px -20px rgba(0,0,0,0.3);
+  }
+  .search-box input {
+    flex: 1; border: none; outline: none; padding: 12px 14px; font-size: 15px; font-family: var(--font-body);
+    letter-spacing: 0.5px;
+  }
+  .search-box button {
+    background: var(--orange-500); color: var(--white); border: none; padding: 0 24px;
+    border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: var(--font-body);
+  }
+  .search-box button:hover { background: #e06f00; }
+  .search-box button:disabled { background: #f3b877; cursor: not-allowed; }
+
+  .content { max-width: 720px; margin: 0 auto; padding: 40px 6vw 72px; }
+
+  .error-banner { background: #fdecea; color: var(--danger); border: 1px solid #f5c6c2; border-radius: 10px; padding: 12px 16px; font-size: 14px; text-align: center; }
+
+  .result-card { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+  .result-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .result-tracking { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .result-code { font-family: var(--font-display); font-size: 20px; color: var(--navy-900); font-weight: 600; }
+  .status-pill { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+  .status-order_received { background: #e8ecfb; color: var(--navy-700); }
+  .status-rider_assigned { background: #fff4e5; color: var(--orange-500); }
+  .status-picked_up { background: #fff4e5; color: var(--orange-500); }
+  .status-in_transit { background: #e6f0ff; color: #2563eb; }
+  .status-arriving_soon { background: #e6f0ff; color: #2563eb; }
+  .status-delivered { background: #e9f9f1; color: var(--success); }
+  .status-cancelled { background: #fdecea; color: var(--danger); }
+
+  .route-summary { display: flex; gap: 16px; margin-bottom: 28px; padding: 16px; background: var(--bg); border-radius: 12px; }
+  .route-point { flex: 1; }
+  .route-point .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .route-point .value { font-size: 13.5px; font-weight: 600; }
+  .route-divider { width: 1px; background: var(--line); }
+
+  .timeline { display: flex; flex-direction: column; }
+  .timeline-step { display: flex; gap: 14px; }
+  .timeline-marker { display: flex; flex-direction: column; align-items: center; }
+  .timeline-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--line); flex-shrink: 0; margin-top: 2px; }
+  .timeline-dot.done { background: var(--success); }
+  .timeline-dot.current { background: var(--orange-500); box-shadow: 0 0 0 4px rgba(245,124,0,0.2); }
+  .timeline-line { width: 2px; flex: 1; background: var(--line); min-height: 24px; }
+  .timeline-line.done { background: var(--success); }
+  .timeline-content { padding-bottom: 24px; }
+  .timeline-content .step-label { font-size: 14.5px; font-weight: 600; margin-bottom: 3px; }
+  .timeline-content .step-time { font-size: 12.5px; color: var(--muted); }
+  .timeline-content.pending .step-label { color: var(--muted); }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14.5px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="/">
+    <img src="/assets/images/jwings-logo.png" alt="JWings" />
+    <span>JWings Logistics</span>
+  </a>
+</nav>
+
+<div class="hero-search">
+  <div class="eyebrow">Track your order</div>
+  <h1>Where's my package?</h1>
+  <div class="search-box">
+    <input type="text" id="trackingInput" placeholder="Enter tracking code, e.g. JWT-123456ABCDE" />
+    <button id="searchBtn">Track</button>
+  </div>
+</div>
+
+<div class="content" id="content"></div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const STATUS_STEPS = [
+    { key: "order_received", label: "Order received" },
+    { key: "rider_assigned", label: "Rider assigned" },
+    { key: "picked_up", label: "Picked up" },
+    { key: "in_transit", label: "In transit" },
+    { key: "arriving_soon", label: "Arriving soon" },
+    { key: "delivered", label: "Delivered" },
+  ];
+  const STATUS_LABELS = {
+    order_received: "Order received", rider_assigned: "Rider assigned", picked_up: "Picked up",
+    in_transit: "In transit", arriving_soon: "Arriving soon", delivered: "Delivered", cancelled: "Cancelled",
+  };
+
+  function formatDateTime(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · " +
+      d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  function renderTimeline(shipment) {
+    if (shipment.status === "cancelled") {
+      return `<div class="timeline-step">
+        <div class="timeline-marker"><div class="timeline-dot" style="background:#d64545;"></div></div>
+        <div class="timeline-content"><div class="step-label">Cancelled</div><div class="step-time">This delivery was cancelled.</div></div>
+      </div>`;
+    }
+
+    const currentIdx = STATUS_STEPS.findIndex(s => s.key === shipment.status);
+    return STATUS_STEPS.map((step, idx) => {
+      const isDone = idx < currentIdx;
+      const isCurrent = idx === currentIdx;
+      const isPending = idx > currentIdx;
+      const event = (shipment.events || []).find(e => e.status === step.key);
+
+      const dotClass = isDone ? "done" : isCurrent ? "current" : "";
+      const lineClass = isDone ? "done" : "";
+      const isLast = idx === STATUS_STEPS.length - 1;
+
+      return `
+        <div class="timeline-step">
+          <div class="timeline-marker">
+            <div class="timeline-dot ${dotClass}"></div>
+            ${!isLast ? `<div class="timeline-line ${lineClass}"></div>` : ""}
+          </div>
+          <div class="timeline-content ${isPending ? "pending" : ""}">
+            <div class="step-label">${step.label}</div>
+            <div class="step-time">${event ? formatDateTime(event.created_at) : (isCurrent ? "In progress" : isPending ? "Pending" : "")}</div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  function renderResult(shipment) {
+    const content = document.getElementById("content");
+    content.innerHTML = `
+      <div class="result-card">
+        <div class="result-top">
+          <div>
+            <div class="result-tracking">Tracking number</div>
+            <div class="result-code">${shipment.tracking_id}</div>
+          </div>
+          <span class="status-pill status-${shipment.status}">${STATUS_LABELS[shipment.status] || shipment.status}</span>
+        </div>
+
+        <div class="route-summary">
+          <div class="route-point">
+            <div class="label">Pickup</div>
+            <div class="value">${shipment.pickup_address}</div>
+          </div>
+          <div class="route-divider"></div>
+          <div class="route-point">
+            <div class="label">Drop-off</div>
+            <div class="value">${shipment.dropoff_address}</div>
+          </div>
+        </div>
+
+        <div class="timeline">${renderTimeline(shipment)}</div>
+      </div>`;
+  }
+
+  async function search() {
+    const input = document.getElementById("trackingInput");
+    const code = input.value.trim();
+    const btn = document.getElementById("searchBtn");
+    const content = document.getElementById("content");
+
+    if (!code) {
+      content.innerHTML = `<div class="error-banner">Please enter a tracking code.</div>`;
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Searching...";
+    content.innerHTML = `<div class="empty-state">Looking up your package...</div>`;
+
+    try {
+      const result = await window.JWingsDB.rpc("track_shipment", { p_tracking_id: code });
+      if (!result) {
+        content.innerHTML = `<div class="error-banner">We couldn't find a delivery with that tracking code. Please check and try again.</div>`;
+      } else {
+        renderResult(result);
+      }
+    } catch (err) {
+      content.innerHTML = `<div class="error-banner">Something went wrong looking that up. Please try again.</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Track";
+    }
+  }
+
+  document.getElementById("searchBtn").addEventListener("click", search);
+  document.getElementById("trackingInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") search();
+  });
+
+  // If arriving with ?code=... pre-filled (e.g. linked from the confirmation screen), search right away.
+  const params = new URLSearchParams(window.location.search);
+  const prefilled = params.get("code");
+  if (prefilled) {
+    document.getElementById("trackingInput").value = prefilled;
+    search();
+  }
+</script>
+</body>
+</html>
