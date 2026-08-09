@@ -20,130 +20,41 @@ function authHeaders(accessToken) {
   };
 }
 
-// ---- Token refresh ---------------------------------------------------
-//
-// Supabase access tokens expire (~1hr). Every REST helper below routes
-// through requestWithAuthRetry(), which transparently refreshes the
-// session and retries once if a request comes back 401 — so pages never
-// need to think about token expiry themselves, they just keep calling
-// window.JWingsDB.select/insert/update/remove as before.
-//
-// refreshPromise dedupes concurrent refreshes: if several requests hit
-// a 401 around the same time (e.g. a page firing off a few queries on
-// load), they all await the *same* refresh call instead of each firing
-// their own — important because Supabase refresh tokens are single-use,
-// so parallel refresh attempts would invalidate each other.
-
-let refreshPromise = null;
-
-async function refreshAccessToken() {
-  if (!refreshPromise) {
-    refreshPromise = (async () => {
-      const session = getSession();
-      if (!session || !session.refresh_token) {
-        throw new Error("No session to refresh.");
-      }
-
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-        method: "POST",
-        headers: baseHeaders,
-        body: JSON.stringify({ refresh_token: session.refresh_token }),
-      });
-
-      if (!res.ok) {
-        // Refresh token itself is invalid/expired too — nothing more we
-        // can do client-side. Clear the stale session so the next guarded
-        // page load sends the user back to login instead of looping.
-        clearSession();
-        throw new Error("Your session has expired. Please log in again.");
-      }
-
-      const newSession = await res.json();
-      saveSession(newSession);
-      return newSession;
-    })().finally(() => {
-      refreshPromise = null;
-    });
-  }
-  return refreshPromise;
-}
-
-// Runs a fetch, and if it comes back 401 while a session exists, refreshes
-// the token once and retries with the new one. buildRequest(token) is
-// called fresh on each attempt so the retry actually uses the new token.
-async function requestWithAuthRetry(buildRequest, accessToken) {
-  let token = accessToken;
-  let { url, options } = buildRequest(token);
-  let res = await fetch(url, options);
-
-  if (res.status === 401 && getSession()) {
-    try {
-      const refreshed = await refreshAccessToken();
-      token = refreshed.access_token;
-      ({ url, options } = buildRequest(token));
-      res = await fetch(url, options);
-    } catch (err) {
-      // Refresh failed — fall through and let the original 401 response
-      // propagate as before, so existing error handling still works.
-    }
-  }
-  return res;
-}
-
 // ---- Generic REST helpers -------------------------------------------------
 
 async function dbSelect(table, query = "", accessToken = null) {
-  const res = await requestWithAuthRetry(
-    (token) => ({
-      url: `${SUPABASE_URL}/rest/v1/${table}?${query}`,
-      options: { headers: authHeaders(token) },
-    }),
-    accessToken
-  );
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: authHeaders(accessToken),
+  });
   if (!res.ok) throw new Error(`Select failed on ${table}: ${res.status}`);
   return res.json();
 }
 
 async function dbInsert(table, payload, accessToken = null) {
-  const res = await requestWithAuthRetry(
-    (token) => ({
-      url: `${SUPABASE_URL}/rest/v1/${table}`,
-      options: {
-        method: "POST",
-        headers: { ...authHeaders(token), "Prefer": "return=representation" },
-        body: JSON.stringify(payload),
-      },
-    }),
-    accessToken
-  );
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: { ...authHeaders(accessToken), "Prefer": "return=representation" },
+    body: JSON.stringify(payload),
+  });
   if (!res.ok) throw new Error(`Insert failed on ${table}: ${res.status}`);
   return res.json();
 }
 
 async function dbUpdate(table, query, payload, accessToken = null) {
-  const res = await requestWithAuthRetry(
-    (token) => ({
-      url: `${SUPABASE_URL}/rest/v1/${table}?${query}`,
-      options: {
-        method: "PATCH",
-        headers: { ...authHeaders(token), "Prefer": "return=representation" },
-        body: JSON.stringify(payload),
-      },
-    }),
-    accessToken
-  );
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    method: "PATCH",
+    headers: { ...authHeaders(accessToken), "Prefer": "return=representation" },
+    body: JSON.stringify(payload),
+  });
   if (!res.ok) throw new Error(`Update failed on ${table}: ${res.status}`);
   return res.json();
 }
 
 async function dbDelete(table, query, accessToken = null) {
-  const res = await requestWithAuthRetry(
-    (token) => ({
-      url: `${SUPABASE_URL}/rest/v1/${table}?${query}`,
-      options: { method: "DELETE", headers: authHeaders(token) },
-    }),
-    accessToken
-  );
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    method: "DELETE",
+    headers: authHeaders(accessToken),
+  });
   if (!res.ok) throw new Error(`Delete failed on ${table}: ${res.status}`);
   return true;
 }
@@ -153,21 +64,15 @@ async function dbDelete(table, query, accessToken = null) {
 // Uploads a file to Supabase Storage and returns its public URL.
 // bucket: e.g. "product-images". path: a unique file path/name within the bucket.
 async function uploadFile(bucket, path, file, accessToken) {
-  const res = await requestWithAuthRetry(
-    (token) => ({
-      url: `${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`,
-      options: {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${token || SUPABASE_ANON_KEY}`,
-          "Content-Type": file.type || "application/octet-stream",
-        },
-        body: file,
-      },
-    }),
-    accessToken
-  );
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `Upload failed: ${res.status}`);
@@ -198,12 +103,10 @@ async function signIn(email, password) {
 }
 
 async function signOut(accessToken) {
-  // Best-effort — if the token's already expired, the server call may
-  // itself 401, but we clear the local session either way below.
   await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
     method: "POST",
     headers: authHeaders(accessToken),
-  }).catch(() => {});
+  });
 }
 
 // Confirms the 6-digit code sent to the user's email after signup.

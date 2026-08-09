@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orders — JWings Vendor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+
+  .main { padding: 32px 4vw 64px; }
+  .top-row { margin-bottom: 20px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-tab {
+    padding: 8px 16px; border-radius: 20px; font-size: 13.5px; font-weight: 600;
+    background: var(--white); border: 1px solid var(--line); color: var(--muted); cursor: pointer;
+    font-family: var(--font-body);
+  }
+  .filter-tab.active { background: var(--navy-700); color: var(--white); border-color: var(--navy-700); }
+  .filter-tab .count { margin-left: 6px; opacity: 0.7; }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+
+  .order-card {
+    border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .order-card:last-child { margin-bottom: 0; }
+  .order-info { flex: 1; min-width: 200px; }
+  .order-num { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .order-product { font-size: 14.5px; font-weight: 600; margin-bottom: 4px; }
+  .order-meta { font-size: 13px; color: var(--muted); }
+  .order-price { font-family: var(--font-display); font-size: 16px; color: var(--navy-900); font-weight: 600; white-space: nowrap; }
+
+  .status-pill { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .status-new { background: #e8ecfb; color: var(--navy-700); }
+  .status-accepted { background: #fff4e5; color: var(--orange-500); }
+  .status-preparing { background: #fff4e5; color: var(--orange-500); }
+  .status-out_for_delivery { background: #e6f0ff; color: #2563eb; }
+  .status-completed { background: #e9f9f1; color: var(--success); }
+  .status-cancelled { background: #fdecea; color: var(--danger); }
+
+  .action-select {
+    padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13px; font-family: var(--font-body); background: var(--white); color: var(--ink);
+  }
+
+  .empty-mini { text-align: center; padding: 56px 16px; }
+  .empty-mini .icon { font-size: 34px; margin-bottom: 12px; }
+  .empty-mini h3 { font-family: var(--font-display); font-size: 18px; color: var(--navy-900); margin-bottom: 8px; }
+  .empty-mini p { color: var(--muted); font-size: 14px; max-width: 340px; margin: 0 auto; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Vendor</span>
+    </div>
+    <nav>
+      <a href="/vendor/dashboard.html">Overview</a>
+      <a href="/vendor/products.html">Products</a>
+      <a class="active" href="/vendor/orders.html">Orders</a>
+      <a href="#">Analytics</a>
+      <a href="#">Wallet</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <h1>Orders</h1>
+      <p id="subText">Loading your orders...</p>
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-status="">All <span class="count" id="countAll">0</span></button>
+      <button class="filter-tab" data-status="new">New <span class="count" id="countNew">0</span></button>
+      <button class="filter-tab" data-status="accepted">Accepted <span class="count" id="countAccepted">0</span></button>
+      <button class="filter-tab" data-status="preparing">Preparing <span class="count" id="countPreparing">0</span></button>
+      <button class="filter-tab" data-status="out_for_delivery">Out for delivery <span class="count" id="countOut">0</span></button>
+      <button class="filter-tab" data-status="completed">Completed <span class="count" id="countCompleted">0</span></button>
+      <button class="filter-tab" data-status="cancelled">Cancelled <span class="count" id="countCancelled">0</span></button>
+    </div>
+
+    <div class="panel">
+      <div id="ordersList">
+        <div class="empty-mini">
+          <div class="icon">📦</div>
+          <h3>Loading...</h3>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html";
+
+  let vendor = null;
+  let allItems = [];
+  let activeFilter = "";
+
+  const STATUS_FLOW = ["new", "accepted", "preparing", "out_for_delivery", "completed"];
+  const STATUS_LABELS = {
+    new: "New", accepted: "Accepted", preparing: "Preparing",
+    out_for_delivery: "Out for delivery", completed: "Completed", cancelled: "Cancelled",
+  };
+
+  function money(amount, currency) {
+    const symbol = currency === "NGN" ? "₦" : (currency || "");
+    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  async function loadVendorAndOrders() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "vendor") {
+      window.location.href = "/vendor/onboarding.html";
+      return;
+    }
+
+    const vendors = await window.JWingsDB.select(
+      "vendors", `select=*&profile_id=eq.${profile.id}&limit=1`, session.access_token
+    );
+    vendor = vendors[0];
+    if (!vendor) {
+      window.location.href = "/vendor/onboarding.html";
+      return;
+    }
+
+    await loadOrders();
+  }
+
+  async function loadOrders() {
+    try {
+      allItems = await window.JWingsDB.select(
+        "order_items",
+        `select=*,orders(order_number,created_at,delivery_type,status)&vendor_id=eq.${vendor.id}&order=created_at.desc`,
+        session.access_token
+      );
+    } catch (err) {
+      allItems = [];
+    }
+    updateCounts();
+    renderOrders();
+  }
+
+  function updateCounts() {
+    document.getElementById("countAll").textContent = allItems.length;
+    document.getElementById("countNew").textContent = allItems.filter(i => i.vendor_order_status === "new").length;
+    document.getElementById("countAccepted").textContent = allItems.filter(i => i.vendor_order_status === "accepted").length;
+    document.getElementById("countPreparing").textContent = allItems.filter(i => i.vendor_order_status === "preparing").length;
+    document.getElementById("countOut").textContent = allItems.filter(i => i.vendor_order_status === "out_for_delivery").length;
+    document.getElementById("countCompleted").textContent = allItems.filter(i => i.vendor_order_status === "completed").length;
+    document.getElementById("countCancelled").textContent = allItems.filter(i => i.vendor_order_status === "cancelled").length;
+
+    document.getElementById("subText").textContent =
+      allItems.length === 0 ? "No orders yet." : `${allItems.length} order item${allItems.length === 1 ? "" : "s"} total.`;
+  }
+
+  function renderOrders() {
+    const list = activeFilter ? allItems.filter(i => i.vendor_order_status === activeFilter) : allItems;
+    const container = document.getElementById("ordersList");
+
+    if (allItems.length === 0) {
+      container.innerHTML = `
+        <div class="empty-mini">
+          <div class="icon">🧾</div>
+          <h3>No orders yet</h3>
+          <p>Once customers start buying from your store, their orders will show up here for you to manage.</p>
+        </div>`;
+      return;
+    }
+
+    if (list.length === 0) {
+      container.innerHTML = `
+        <div class="empty-mini">
+          <div class="icon">🔍</div>
+          <h3>Nothing in this filter</h3>
+          <p>No orders currently have this status.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = list.map((item) => {
+      const orderNum = item.orders ? item.orders.order_number : "—";
+      const dateStr = item.orders ? formatDate(item.orders.created_at) : "";
+      const status = item.vendor_order_status;
+      const isFinal = status === "completed" || status === "cancelled";
+
+      const nextOptions = STATUS_FLOW.map(s =>
+        `<option value="${s}" ${s === status ? "selected" : ""}>${STATUS_LABELS[s]}</option>`
+      ).join("") + `<option value="cancelled" ${status === "cancelled" ? "selected" : ""}>Cancelled</option>`;
+
+      return `
+        <div class="order-card">
+          <div class="order-info">
+            <div class="order-num">Order ${orderNum} · ${dateStr}</div>
+            <div class="order-product">${item.product_name} × ${item.quantity}</div>
+            <div class="order-meta">${item.variant ? item.variant + " · " : ""}${item.orders ? item.orders.delivery_type : ""}</div>
+          </div>
+          <div class="order-price">${money(item.line_total_buyer_currency, item.vendor_currency)}</div>
+          <span class="status-pill status-${status}">${STATUS_LABELS[status] || status}</span>
+          ${isFinal ? "" : `
+            <select class="action-select" data-item-id="${item.id}">
+              ${nextOptions}
+            </select>`}
+        </div>`;
+    }).join("");
+
+    container.querySelectorAll(".action-select").forEach((select) => {
+      select.addEventListener("change", async (e) => {
+        const itemId = e.target.getAttribute("data-item-id");
+        const newStatus = e.target.value;
+        e.target.disabled = true;
+        try {
+          await window.JWingsDB.update(
+            "order_items", `id=eq.${itemId}`, { vendor_order_status: newStatus }, session.access_token
+          );
+          await loadOrders();
+        } catch (err) {
+          alert("Couldn't update this order's status. Please try again.");
+          e.target.disabled = false;
+        }
+      });
+    });
+  }
+
+  document.getElementById("filterTabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".filter-tab");
+    if (!btn) return;
+    document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeFilter = btn.getAttribute("data-status");
+    renderOrders();
+  });
+
+  loadVendorAndOrders();
+</script>
+</body>
+</html>
