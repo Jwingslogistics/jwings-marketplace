@@ -210,7 +210,17 @@
     try {
       const result = await window.JWingsDB.rpc("track_shipment", { p_tracking_id: code });
       if (!result) {
-        content.innerHTML = `<div class="error-banner">We couldn't find a delivery with that tracking code. Please check and try again.</div>`;
+        const looksLikeOrderNumber = /^JW\d+$/i.test(code) && !/^JWT-/i.test(code);
+        if (looksLikeOrderNumber) {
+          content.innerHTML = `
+            <div class="error-banner">
+              "${code}" looks like a marketplace order number, not a delivery tracking code.
+              Marketplace orders are tracked from your <a href="/customer/dashboard.html" style="color:#1a237e; font-weight:700; text-decoration:underline;">dashboard</a> instead —
+              log in and click the order to see its status.
+            </div>`;
+        } else {
+          content.innerHTML = `<div class="error-banner">We couldn't find a delivery with that tracking code. Please check and try again.</div>`;
+        }
       } else {
         renderResult(result);
       }
