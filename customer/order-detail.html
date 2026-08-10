@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Details — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo img { width: 30px; height: 30px; }
+  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
+
+  .breadcrumb { padding: 20px 6vw 0; font-size: 13px; color: var(--muted); }
+  .breadcrumb a:hover { color: var(--navy-700); }
+
+  .content { max-width: 760px; margin: 0 auto; padding: 20px 6vw 72px; }
+
+  .order-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .order-head .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .order-head h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .order-head .date { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .status-pill { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+  .status-new, .status-pending { background: #e8ecfb; color: var(--navy-700); }
+  .status-accepted, .status-preparing { background: #fff4e5; color: var(--orange-500); }
+  .status-out_for_delivery { background: #e6f0ff; color: #2563eb; }
+  .status-completed { background: #e9f9f1; color: var(--success); }
+  .status-cancelled { background: #fdecea; color: var(--danger); }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+  .panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 16px; }
+
+  .item-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-main { flex: 1; min-width: 180px; }
+  .item-vendor { font-size: 11.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+  .item-name { font-size: 14.5px; font-weight: 600; margin-bottom: 3px; }
+  .item-qty { font-size: 12.5px; color: var(--muted); }
+  .item-price { font-family: var(--font-display); font-size: 15px; color: var(--navy-900); font-weight: 600; }
+
+  .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: var(--muted); }
+  .summary-row.total { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 8px; font-size: 16px; font-weight: 700; color: var(--navy-900); }
+
+  .address-block { font-size: 14px; line-height: 1.6; color: var(--ink); }
+  .address-block .tag { font-size: 11.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+
+  .loading-state, .error-state { padding: 60px 20px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="/">
+    <img src="/assets/images/jwings-logo.png" alt="JWings" />
+    <span>JWings Logistics</span>
+  </a>
+</nav>
+
+<div class="breadcrumb">
+  <a href="/customer/dashboard.html">My Dashboard</a> / <span>Order details</span>
+</div>
+
+<div class="content" id="content">
+  <div class="loading-state">Loading your order...</div>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=" + encodeURIComponent(window.location.pathname + window.location.search);
+
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get("id");
+
+  const ITEM_STATUS_LABELS = {
+    new: "New", accepted: "Accepted", preparing: "Preparing",
+    out_for_delivery: "Out for delivery", completed: "Completed", cancelled: "Cancelled",
+  };
+
+  function money(amount, currency) {
+    const symbol = currency === "NGN" ? "₦" : (currency || "");
+    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  }
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) +
+      " · " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  async function load() {
+    if (!orderId) {
+      document.getElementById("content").innerHTML = `<div class="error-state">No order specified.</div>`;
+      return;
+    }
+
+    try {
+      const orders = await window.JWingsDB.select("orders", `select=*&id=eq.${orderId}&limit=1`, session.access_token);
+      const order = orders[0];
+      if (!order) {
+        document.getElementById("content").innerHTML = `<div class="error-state">This order couldn't be found.</div>`;
+        return;
+      }
+
+      const items = await window.JWingsDB.select(
+        "order_items", `select=*,vendors(store_name)&order_id=eq.${orderId}&order=created_at.asc`, session.access_token
+      );
+
+      let address = null;
+      if (order.delivery_address_id) {
+        const addresses = await window.JWingsDB.select(
+          "addresses", `select=*&id=eq.${order.delivery_address_id}&limit=1`, session.access_token
+        );
+        address = addresses[0];
+      }
+
+      render(order, items, address);
+    } catch (err) {
+      document.getElementById("content").innerHTML = `<div class="error-state">Couldn't load this order right now. Please refresh.</div>`;
+    }
+  }
+
+  function render(order, items, address) {
+    document.title = `Order ${order.order_number} — JWings Logistics`;
+
+    const itemsHtml = items.map(i => `
+      <div class="item-row">
+        <div class="item-main">
+          <div class="item-vendor">${i.vendors ? i.vendors.store_name : "JWings Vendor"}</div>
+          <div class="item-name">${i.product_name}</div>
+          <div class="item-qty">Qty ${i.quantity} · <span class="status-pill status-${i.vendor_order_status}" style="padding:2px 8px; font-size:11px;">${ITEM_STATUS_LABELS[i.vendor_order_status] || i.vendor_order_status}</span></div>
+        </div>
+        <div class="item-price">${money(i.line_total_buyer_currency, i.vendor_currency)}</div>
+      </div>`).join("");
+
+    const addressHtml = address ? `
+      <div class="address-block">
+        <div class="tag">Delivery address</div>
+        <div>${address.full_address}</div>
+        <div>${address.city}${address.state ? ", " + address.state : ""}</div>
+      </div>` : `<div class="address-block">No delivery address on file.</div>`;
+
+    document.getElementById("content").innerHTML = `
+      <div class="order-head">
+        <div>
+          <div class="label">Order</div>
+          <h1>${order.order_number}</h1>
+          <div class="date">Placed ${formatDate(order.created_at)}</div>
+        </div>
+        <span class="status-pill status-${order.status}">${order.status.replace("_", " ")}</span>
+      </div>
+
+      <div class="panel">
+        <h3>Items</h3>
+        ${itemsHtml || `<p style="color:var(--muted); font-size:14px;">No items found for this order.</p>`}
+      </div>
+
+      <div class="panel">
+        <h3>Delivery</h3>
+        ${addressHtml}
+        <div style="margin-top:14px; font-size:13.5px; color:var(--muted);">
+          ${order.delivery_type.replace("_", " ")} delivery
+          ${order.order_notes ? `<br/>Note: ${order.order_notes}` : ""}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Payment summary</h3>
+        <div class="summary-row"><span>Subtotal</span><span>${money(order.subtotal, order.buyer_currency)}</span></div>
+        <div class="summary-row"><span>Delivery fee</span><span>${money(order.delivery_fee, order.buyer_currency)}</span></div>
+        <div class="summary-row"><span>Service fee</span><span>${money(order.service_fee, order.buyer_currency)}</span></div>
+        <div class="summary-row total"><span>Total</span><span>${money(order.total, order.buyer_currency)}</span></div>
+      </div>
+    `;
+  }
+
+  load();
+</script>
+</body>
+</html>

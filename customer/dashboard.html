@@ -189,14 +189,14 @@
       }
 
       card.innerHTML = orders.map(o => `
-        <div class="row-item">
+        <a class="row-item" href="/customer/order-detail.html?id=${o.id}">
           <div class="row-main">
             <div class="row-title">Order ${o.order_number}</div>
             <div class="row-sub">${formatDate(o.created_at)} · ${o.delivery_type.replace("_", " ")}</div>
           </div>
           <span class="status-pill status-${o.status}">${ORDER_LABELS[o.status] || o.status}</span>
           <div class="row-amount">${money(o.total, o.buyer_currency)}</div>
-        </div>`).join("");
+        </a>`).join("");
     } catch (err) {
       card.innerHTML = `<div class="empty-mini"><p>Couldn't load your orders right now.</p></div>`;
     }

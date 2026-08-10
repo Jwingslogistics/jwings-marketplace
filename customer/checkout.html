@@ -282,7 +282,8 @@
           <div class="icon">🎉</div>
           <h2>Order placed!</h2>
           <p>Order <strong>${orderNumber}</strong> has been sent to the vendor. You'll be able to track it from your dashboard.</p>
-          <a href="/customer/dashboard.html">Go to my dashboard</a>
+          <a href="/customer/order-detail.html?id=${order.id}" style="margin-right:10px;">Track this order</a>
+          <a href="/customer/dashboard.html" style="background:transparent; color:#1a237e; border:1.5px solid #1a237e;">My dashboard</a>
         </div>`;
     } catch (err) {
       showError(err.message || "Something went wrong placing your order. Please try again.");
