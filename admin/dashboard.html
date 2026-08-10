@@ -3,29 +3,181 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dashboard — JWings Logistics</title>
+<title>Vendor Dashboard — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#f7f8fc; color:#1c1f2e; display:flex; align-items:center; justify-content:center; min-height:100vh; text-align:center; }
-  .card { background:white; padding:48px 40px; border-radius:16px; box-shadow:0 10px 30px rgba(26,35,126,0.08); max-width:440px; }
-  img { width:56px; margin-bottom:16px; }
-  h1 { font-size:20px; margin:0 0 8px; color:#1a237e; }
-  p { color:#666; font-size:14.5px; line-height:1.5; }
-  a { color:#f57c00; font-weight:600; text-decoration:none; font-size:14px; }
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .side-foot { margin-top: auto; font-size: 12px; color: rgba(255,255,255,0.4); padding: 0 6px; }
+
+  .main { padding: 32px 4vw 64px; }
+  .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  .add-btn { background: var(--orange-500); color: var(--white); padding: 11px 20px; border-radius: 9px; font-weight: 700; font-size: 14px; border: none; cursor: pointer; }
+  .add-btn:hover { background: #e06f00; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px; }
+  @media (max-width: 800px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+  .stat-card .value { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); font-weight: 600; }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+  .panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 6px; }
+  .panel p.sub { color: var(--muted); font-size: 13.5px; margin-bottom: 20px; }
+
+  .empty-mini { text-align: center; padding: 32px 16px; }
+  .empty-mini .icon { font-size: 30px; margin-bottom: 10px; }
+  .empty-mini a { display: inline-block; margin-top: 14px; background: var(--navy-700); color: var(--white); padding: 10px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600; }
+  .empty-mini a:hover { background: var(--navy-900); }
 </style>
 </head>
 <body>
-  <div class="card">
-    <img src="/assets/images/jwings-logo.png" alt="JWings" />
-    <h1>Welcome to your admin dashboard</h1>
-    <p>You're signed in. The full admin dashboard is being built next.</p>
-    <a href="/index.html">Back to home</a>
-  </div>
-  <script src="/shared/supabase-client.js"></script>
-  <script>
-    // Basic guard: bounce back to login if there's no session at all.
-    if (!window.JWingsDB.getSession()) {
-      window.location.href = "/customer/login.html";
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Vendor</span>
+    </div>
+    <nav>
+      <a class="active" href="/vendor/dashboard.html">Overview</a>
+      <a href="/vendor/products.html">Products</a>
+      <a href="/vendor/orders.html">Orders</a>
+      <a href="#">Analytics</a>
+      <a href="#">Wallet</a>
+    </nav>
+    <div class="side-foot">JWings Logistics</div>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <div>
+        <h1 id="storeNameHeading">Your store</h1>
+        <p id="storeSubtext">Loading your dashboard...</p>
+      </div>
+      <a class="add-btn" href="/vendor/products.html">+ Add product</a>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total orders</div><div class="value" id="statOrders">0</div></div>
+      <div class="stat-card"><div class="label">Products listed</div><div class="value" id="statProducts">0</div></div>
+      <div class="stat-card"><div class="label">Wallet balance</div><div class="value" id="statWallet">₦0</div></div>
+      <div class="stat-card"><div class="label">Rating</div><div class="value" id="statRating">—</div></div>
+    </div>
+
+    <div class="panel" id="mainPanel">
+      <h3>Recent products</h3>
+      <p class="sub">The last products you've added to your store.</p>
+      <div id="recentProducts">
+        <div class="empty-mini">
+          <div class="icon">📦</div>
+          <p style="color:#666a80; font-size:14px;">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) {
+    window.location.href = "/customer/login.html";
+  }
+
+  function money(amount, currency) {
+    const symbol = currency === "NGN" ? "₦" : (currency || "");
+    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  }
+
+  async function loadDashboard() {
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      if (!profile) throw new Error("no profile");
+
+      if (profile.role !== "vendor") {
+        // Not a vendor yet — send them to set up a store first.
+        window.location.href = "/vendor/onboarding.html";
+        return;
+      }
+
+      const vendors = await window.JWingsDB.select(
+        "vendors",
+        `select=*&profile_id=eq.${profile.id}&limit=1`,
+        session.access_token
+      );
+      const vendor = vendors[0];
+      if (!vendor) {
+        window.location.href = "/vendor/onboarding.html";
+        return;
+      }
+
+      document.getElementById("storeNameHeading").textContent = vendor.store_name;
+      document.getElementById("storeSubtext").textContent = `${vendor.city || "—"}${vendor.state ? ", " + vendor.state : ""} · ${vendor.currency}`;
+      document.getElementById("statWallet").textContent = money(vendor.wallet_balance, vendor.currency);
+      document.getElementById("statRating").textContent = vendor.average_rating > 0 ? `${vendor.average_rating}★` : "No ratings yet";
+
+      const products = await window.JWingsDB.select(
+        "products",
+        `select=*&vendor_id=eq.${vendor.id}&order=created_at.desc&limit=5`,
+        session.access_token
+      );
+
+      document.getElementById("statProducts").textContent = products.length;
+
+      const orderItems = await window.JWingsDB.select(
+        "order_items",
+        `select=id&vendor_id=eq.${vendor.id}`,
+        session.access_token
+      );
+      document.getElementById("statOrders").textContent = orderItems.length;
+
+      const recentEl = document.getElementById("recentProducts");
+      if (products.length === 0) {
+        recentEl.innerHTML = `
+          <div class="empty-mini">
+            <div class="icon">📦</div>
+            <p style="color:#666a80; font-size:14px;">You haven't added any products yet.</p>
+            <a href="/vendor/products.html">Add your first product</a>
+          </div>`;
+      } else {
+        recentEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            ${products.map(p => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:#f7f8fc; border-radius:10px;">
+                <span style="font-size:14px; font-weight:600;">${p.name}</span>
+                <span style="font-size:13.5px; color:#666a80;">${money(p.price, p.currency)} · Stock: ${p.stock}</span>
+              </div>`).join("")}
+          </div>`;
+      }
+    } catch (err) {
+      document.getElementById("storeSubtext").textContent = "Couldn't load your store details.";
     }
-  </script>
+  }
+
+  loadDashboard();
+</script>
 </body>
 </html>
