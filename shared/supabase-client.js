@@ -91,6 +91,37 @@ async function uploadFile(bucket, path, file, accessToken) {
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
 
+// Uploads to a PRIVATE bucket and returns just the storage path (not a
+// public URL, since private buckets require a signed URL to view).
+async function uploadPrivateFile(bucket, path, file, accessToken) {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Upload failed: ${res.status}`);
+  }
+  return path; // store this raw path; use getSignedUrl() to view it later
+}
+
+// Generates a temporary signed URL to view a file in a private bucket.
+async function getSignedUrl(bucket, path, accessToken, expiresIn = 3600) {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${path}`, {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({ expiresIn }),
+  });
+  if (!res.ok) throw new Error(`Couldn't generate a viewable link: ${res.status}`);
+  const data = await res.json();
+  return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+}
+
 // ---- Auth helpers -----------------------------------------------------
 
 async function signUp(email, password, extra = {}) {
@@ -187,6 +218,8 @@ window.JWingsDB = {
   remove: dbDelete,
   rpc: dbRpc,
   uploadFile,
+  uploadPrivateFile,
+  getSignedUrl,
   signUp,
   signIn,
   signOut,

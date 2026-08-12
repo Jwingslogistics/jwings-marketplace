@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verification — JWings Rider</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo img { width: 30px; height: 30px; }
+  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
+  .nav-links a { font-size: 14px; font-weight: 500; }
+
+  .page-head { padding: 32px 6vw 8px; }
+  .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
+  .page-head p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .content { max-width: 560px; margin: 0 auto; padding: 20px 6vw 72px; }
+
+  .status-banner {
+    border-radius: 14px; padding: 18px 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 14px;
+  }
+  .status-banner.pending { background: #fff4e5; border: 1px solid #ffddb0; }
+  .status-banner.verified { background: #e9f9f1; border: 1px solid #b9ecd4; }
+  .status-banner .icon { font-size: 24px; }
+  .status-banner .title { font-weight: 700; font-size: 14.5px; margin-bottom: 2px; }
+  .status-banner.pending .title { color: var(--orange-500); }
+  .status-banner.verified .title { color: var(--success); }
+  .status-banner .sub { font-size: 12.5px; color: var(--muted); }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 6px; }
+  .panel p.sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+
+  .image-picker {
+    border: 1.5px dashed var(--line); border-radius: 12px; padding: 24px; text-align: center;
+    cursor: pointer; position: relative; background: var(--bg); margin-bottom: 18px;
+  }
+  .image-picker:hover { border-color: var(--navy-500); }
+  .image-picker input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .image-picker .placeholder { font-size: 13.5px; color: var(--muted); }
+  .image-picker .placeholder strong { color: var(--navy-700); display: block; margin-bottom: 4px; }
+  .preview-wrap img { max-width: 100%; max-height: 200px; border-radius: 10px; margin: 0 auto; display: block; }
+  .preview-wrap .fname { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+
+  .submit-btn {
+    width: 100%; padding: 13px 0; background: var(--orange-500); color: var(--white); border: none;
+    border-radius: 10px; font-weight: 700; font-size: 14.5px; cursor: pointer; font-family: var(--font-body);
+  }
+  .submit-btn:hover { background: #e06f00; }
+  .submit-btn:disabled { background: #f3b877; cursor: not-allowed; }
+  .error-text { color: var(--danger); font-size: 12.5px; margin-bottom: 12px; display: none; }
+  .error-text.show { display: block; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="/rider/dashboard.html">
+    <img src="/assets/images/jwings-logo.png" alt="JWings" />
+    <span>JWings Rider</span>
+  </a>
+  <div class="nav-links">
+    <a href="/rider/dashboard.html">Deliveries</a>
+  </div>
+</nav>
+
+<div class="page-head">
+  <h1>Identity Verification</h1>
+  <p>Upload a valid ID or driver's license so we can activate full delivery access.</p>
+</div>
+
+<div class="content">
+  <div id="statusBanner"></div>
+
+  <div class="panel">
+    <h3>Upload document</h3>
+    <p class="sub">A government ID, driver's license, or vehicle registration — clear photo, all corners visible.</p>
+
+    <div class="error-text" id="uploadError"></div>
+
+    <div class="image-picker" id="imagePicker">
+      <input type="file" id="docFile" accept="image/*" />
+      <div id="pickerContent">
+        <div class="placeholder"><strong>Tap to upload a photo</strong>JPG or PNG, up to 5MB</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn">Submit for review</button>
+  </div>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/rider/documents.html";
+
+  let rider = null;
+  let selectedFile = null;
+
+  async function init() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "rider") {
+      window.location.href = "/customer/dashboard.html";
+      return;
+    }
+
+    const riders = await window.JWingsDB.select("riders", `select=*&profile_id=eq.${profile.id}&limit=1`, session.access_token);
+    rider = riders[0];
+    if (!rider) return;
+
+    renderStatus();
+  }
+
+  function renderStatus() {
+    const banner = document.getElementById("statusBanner");
+    if (rider.documents_verified) {
+      banner.innerHTML = `
+        <div class="status-banner verified">
+          <span class="icon">✅</span>
+          <div><div class="title">You're verified</div><div class="sub">Full delivery access is active on your account.</div></div>
+        </div>`;
+    } else if (rider.document_url) {
+      banner.innerHTML = `
+        <div class="status-banner pending">
+          <span class="icon">⏳</span>
+          <div><div class="title">Under review</div><div class="sub">Your document was submitted and is awaiting admin approval.</div></div>
+        </div>`;
+    } else {
+      banner.innerHTML = `
+        <div class="status-banner pending">
+          <span class="icon">📋</span>
+          <div><div class="title">Verification needed</div><div class="sub">Upload a document below to get started.</div></div>
+        </div>`;
+    }
+  }
+
+  document.getElementById("docFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      document.getElementById("uploadError").textContent = "That file is too large — please pick one under 5MB.";
+      document.getElementById("uploadError").classList.add("show");
+      e.target.value = "";
+      return;
+    }
+
+    document.getElementById("uploadError").classList.remove("show");
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById("pickerContent").innerHTML = `
+        <div class="preview-wrap">
+          <img src="${ev.target.result}" alt="Preview" />
+          <div class="fname">${file.name}</div>
+        </div>`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById("submitBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("uploadError");
+    errorEl.classList.remove("show");
+
+    if (!selectedFile) {
+      errorEl.textContent = "Please choose a document photo first.";
+      errorEl.classList.add("show");
+      return;
+    }
+
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.textContent = "Uploading...";
+
+    try {
+      const ext = selectedFile.name.split(".").pop();
+      const path = `${rider.id}/${Date.now()}.${ext}`;
+      const url = await window.JWingsDB.uploadPrivateFile("rider-documents", path, selectedFile, session.access_token);
+
+      await window.JWingsDB.update("riders", `id=eq.${rider.id}`, { document_url: url }, session.access_token);
+      rider.document_url = url;
+      renderStatus();
+      alert("Document submitted! We'll review it shortly.");
+    } catch (err) {
+      errorEl.textContent = "Couldn't upload your document. Please try again.";
+      errorEl.classList.add("show");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Submit for review";
+    }
+  });
+
+  init();
+</script>
+</body>
+</html>

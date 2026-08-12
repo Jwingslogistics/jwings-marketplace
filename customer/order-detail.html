@@ -133,6 +133,22 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="riderReviewModalBackdrop">
+  <div class="review-modal">
+    <h3>Rate your rider</h3>
+    <div class="product-name-sub">How was your delivery experience?</div>
+    <div class="review-error" id="riderReviewError"></div>
+    <div class="star-picker" id="riderStarPicker">
+      <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+    </div>
+    <textarea id="riderReviewComment" rows="3" placeholder="Optional: how was the delivery?"></textarea>
+    <div class="review-modal-actions">
+      <button class="review-cancel-btn" id="riderReviewCancelBtn" type="button">Cancel</button>
+      <button class="review-submit-btn" id="riderReviewSubmitBtn" type="button">Submit review</button>
+    </div>
+  </div>
+</div>
+
 <script src="/shared/supabase-client.js"></script>
 <script>
   const session = window.JWingsDB.getSession();
@@ -231,6 +247,7 @@
             <div class="item-main">
               <div class="item-name">${s.tracking_id}</div>
               <div class="item-qty">Delivery status: <span class="status-pill status-${s.status}" style="padding:2px 8px; font-size:11px;">${SHIPMENT_LABELS[s.status] || s.status}</span></div>
+              ${s.status === "delivered" && s.rider_id ? `<button class="rider-review-btn" data-rider-id="${s.rider_id}" style="margin-top:6px; background:none; border:1px solid #f57c00; color:#f57c00; padding:5px 12px; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer;">★ Rate your rider</button>` : ""}
             </div>
             <a href="/customer/track.html?code=${s.tracking_id}" style="background:#1a237e; color:white; padding:9px 16px; border-radius:8px; font-size:13px; font-weight:700;">Track</a>
           </div>`).join("")}
@@ -287,7 +304,76 @@
         btn.getAttribute("data-vendor-id")
       ));
     });
+
+    document.querySelectorAll(".rider-review-btn").forEach((btn) => {
+      btn.addEventListener("click", () => openRiderReviewModal(btn.getAttribute("data-rider-id")));
+    });
   }
+
+  // ---- Rider review modal logic ----
+  let riderSelectedRating = 0;
+  let reviewRiderId = null;
+
+  function openRiderReviewModal(riderId) {
+    reviewRiderId = riderId;
+    riderSelectedRating = 0;
+    document.getElementById("riderReviewComment").value = "";
+    document.getElementById("riderReviewError").classList.remove("show");
+    updateRiderStars();
+    document.getElementById("riderReviewModalBackdrop").classList.add("show");
+  }
+
+  function updateRiderStars() {
+    document.querySelectorAll("#riderStarPicker span").forEach((star) => {
+      star.classList.toggle("active", parseInt(star.getAttribute("data-val"), 10) <= riderSelectedRating);
+    });
+  }
+
+  document.querySelectorAll("#riderStarPicker span").forEach((star) => {
+    star.addEventListener("click", () => {
+      riderSelectedRating = parseInt(star.getAttribute("data-val"), 10);
+      updateRiderStars();
+    });
+  });
+
+  document.getElementById("riderReviewCancelBtn").addEventListener("click", () => {
+    document.getElementById("riderReviewModalBackdrop").classList.remove("show");
+  });
+
+  document.getElementById("riderReviewSubmitBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("riderReviewError");
+    errorEl.classList.remove("show");
+
+    if (riderSelectedRating === 0) {
+      errorEl.textContent = "Please pick a star rating.";
+      errorEl.classList.add("show");
+      return;
+    }
+
+    const btn = document.getElementById("riderReviewSubmitBtn");
+    btn.disabled = true;
+    btn.textContent = "Submitting...";
+
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      await window.JWingsDB.insert("reviews", {
+        order_id: orderId,
+        customer_id: profile.id,
+        rider_id: reviewRiderId,
+        rating: riderSelectedRating,
+        comment: document.getElementById("riderReviewComment").value.trim() || null,
+      }, session.access_token);
+
+      document.getElementById("riderReviewModalBackdrop").classList.remove("show");
+      alert("Thanks for rating your rider!");
+    } catch (err) {
+      errorEl.textContent = "Couldn't submit your review. You may have already reviewed this rider for this delivery.";
+      errorEl.classList.add("show");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Submit review";
+    }
+  });
 
   function openReviewModal(productId, productName, vendorId) {
     reviewProductId = productId;
