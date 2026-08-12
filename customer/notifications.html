@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Notifications — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo img { width: 30px; height: 30px; }
+  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
+  .nav-links a { font-size: 14px; font-weight: 500; }
+
+  .page-head { padding: 32px 6vw 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
+  .mark-all-btn { background: none; border: 1px solid var(--line); color: var(--navy-700); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-body); }
+  .mark-all-btn:hover { background: var(--white); }
+
+  .filter-tabs { display: flex; gap: 8px; padding: 20px 6vw 8px; flex-wrap: wrap; }
+  .filter-tab {
+    padding: 7px 15px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    background: var(--white); border: 1px solid var(--line); color: var(--muted); cursor: pointer; font-family: var(--font-body);
+  }
+  .filter-tab.active { background: var(--navy-700); color: var(--white); border-color: var(--navy-700); }
+
+  .content { max-width: 700px; margin: 0 auto; padding: 12px 6vw 72px; }
+
+  .notif-card {
+    background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+    margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start; cursor: pointer;
+  }
+  .notif-card.unread { border-left: 3px solid var(--orange-500); background: #fffaf5; }
+  .notif-icon { font-size: 18px; margin-top: 2px; }
+  .notif-body { flex: 1; }
+  .notif-title { font-size: 14.5px; font-weight: 700; margin-bottom: 3px; }
+  .notif-message { font-size: 13.5px; color: var(--muted); line-height: 1.4; }
+  .notif-time { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+  .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange-500); flex-shrink: 0; margin-top: 6px; }
+
+  .empty-mini { text-align: center; padding: 60px 20px; }
+  .empty-mini .icon { font-size: 34px; margin-bottom: 14px; }
+  .empty-mini p { color: var(--muted); font-size: 14.5px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="/">
+    <img src="/assets/images/jwings-logo.png" alt="JWings" />
+    <span>JWings Logistics</span>
+  </a>
+  <div class="nav-links">
+    <a href="/customer/dashboard.html">My Dashboard</a>
+  </div>
+</nav>
+
+<div class="page-head">
+  <h1>Notifications</h1>
+  <button class="mark-all-btn" id="markAllBtn">Mark all as read</button>
+</div>
+
+<div class="filter-tabs">
+  <button class="filter-tab active" data-filter="all">All</button>
+  <button class="filter-tab" data-filter="unread">Unread</button>
+  <button class="filter-tab" data-filter="orders">Orders</button>
+  <button class="filter-tab" data-filter="promotions">Promotions</button>
+  <button class="filter-tab" data-filter="updates">Updates</button>
+  <button class="filter-tab" data-filter="system">System</button>
+</div>
+
+<div class="content" id="content">
+  <div class="empty-mini"><p>Loading...</p></div>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/customer/notifications.html";
+
+  let allNotifications = [];
+  let activeFilter = "all";
+
+  const CATEGORY_ICONS = { orders: "📦", promotions: "🎉", updates: "🔔", system: "⚙️" };
+
+  function timeAgo(iso) {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  async function load() {
+    try {
+      allNotifications = await window.JWingsDB.select(
+        "notifications", "select=*&order=created_at.desc&limit=50", session.access_token
+      );
+      render();
+    } catch (err) {
+      document.getElementById("content").innerHTML = `<div class="empty-mini"><p>Couldn't load notifications right now.</p></div>`;
+    }
+  }
+
+  function render() {
+    let list = allNotifications;
+    if (activeFilter === "unread") list = list.filter(n => !n.is_read);
+    else if (activeFilter !== "all") list = list.filter(n => n.category === activeFilter);
+
+    const content = document.getElementById("content");
+
+    if (list.length === 0) {
+      content.innerHTML = `
+        <div class="empty-mini">
+          <div class="icon">🔔</div>
+          <p>${activeFilter === "all" ? "No notifications yet." : "Nothing here right now."}</p>
+        </div>`;
+      return;
+    }
+
+    content.innerHTML = list.map(n => `
+      <div class="notif-card ${n.is_read ? "" : "unread"}" data-id="${n.id}">
+        <div class="notif-icon">${CATEGORY_ICONS[n.category] || "🔔"}</div>
+        <div class="notif-body">
+          <div class="notif-title">${n.title}</div>
+          <div class="notif-message">${n.message}</div>
+          <div class="notif-time">${timeAgo(n.created_at)}</div>
+        </div>
+        ${n.is_read ? "" : `<div class="unread-dot"></div>`}
+      </div>`).join("");
+
+    document.querySelectorAll(".notif-card").forEach((card) => {
+      card.addEventListener("click", () => markAsRead(card.getAttribute("data-id")));
+    });
+  }
+
+  async function markAsRead(id) {
+    const notif = allNotifications.find(n => n.id === id);
+    if (!notif || notif.is_read) return;
+    notif.is_read = true;
+    render();
+    try {
+      await window.JWingsDB.update("notifications", `id=eq.${id}`, { is_read: true }, session.access_token);
+    } catch (err) {
+      // Non-critical — the UI already reflects the read state.
+    }
+  }
+
+  document.getElementById("markAllBtn").addEventListener("click", async () => {
+    const unread = allNotifications.filter(n => !n.is_read);
+    if (unread.length === 0) return;
+    unread.forEach(n => n.is_read = true);
+    render();
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      await window.JWingsDB.update("notifications", `user_id=eq.${profile.id}&is_read=eq.false`, { is_read: true }, session.access_token);
+    } catch (err) {
+      // Non-critical
+    }
+  });
+
+  document.querySelectorAll(".filter-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      activeFilter = tab.getAttribute("data-filter");
+      render();
+    });
+  });
+
+  load();
+</script>
+</body>
+</html>
