@@ -62,6 +62,18 @@
   .stock-note.low { color: var(--orange-500); }
   .stock-note.out { color: #d64545; }
 
+  .rating-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13.5px; color: var(--muted); }
+  .rating-stars { color: #f5a623; letter-spacing: 1px; }
+
+  .reviews-section { max-width: 780px; margin: 0 auto; padding: 0 6vw 72px; }
+  .reviews-section h2 { font-family: var(--font-display); font-size: 20px; color: var(--navy-900); margin-bottom: 18px; }
+  .review-card { background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+  .review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .review-name { font-size: 13.5px; font-weight: 600; }
+  .review-date { font-size: 12px; color: var(--muted); }
+  .review-comment { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
+  .no-reviews { color: var(--muted); font-size: 14px; text-align: center; padding: 30px 0; }
+
   .description { color: var(--muted); font-size: 14.5px; line-height: 1.65; margin-bottom: 28px; }
 
   .qty-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
@@ -118,6 +130,11 @@
   <div class="loading-state">Loading product...</div>
 </div>
 
+<div class="reviews-section" id="reviewsSection" style="display:none;">
+  <h2>Customer Reviews</h2>
+  <div id="reviewsList"></div>
+</div>
+
 <div class="toast" id="toast">Added to cart</div>
 
 <script src="/shared/supabase-client.js"></script>
@@ -169,8 +186,43 @@
         return;
       }
       render();
+      loadReviews();
     } catch (err) {
       document.getElementById("content").innerHTML = `<div class="error-state">Couldn't load this product right now. Please refresh.</div>`;
+    }
+  }
+
+  function starString(rating) {
+    const rounded = Math.round(rating || 0);
+    return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+  }
+
+  async function loadReviews() {
+    const section = document.getElementById("reviewsSection");
+    const list = document.getElementById("reviewsList");
+    try {
+      const reviews = await window.JWingsDB.select(
+        "reviews", `select=*,profiles(full_name)&product_id=eq.${productId}&order=created_at.desc`
+      );
+
+      section.style.display = "block";
+
+      if (reviews.length === 0) {
+        list.innerHTML = `<div class="no-reviews">No reviews yet — be the first to leave one after your order is delivered.</div>`;
+        return;
+      }
+
+      list.innerHTML = reviews.map(r => `
+        <div class="review-card">
+          <div class="review-top">
+            <span class="review-name">${r.profiles ? r.profiles.full_name : "JWings Customer"}</span>
+            <span class="review-date">${new Date(r.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+          </div>
+          <div class="rating-stars" style="margin-bottom:6px;">${starString(r.rating)}</div>
+          ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ""}
+        </div>`).join("");
+    } catch (err) {
+      // Silently skip — reviews are a nice-to-have, not critical to the page.
     }
   }
 
@@ -200,6 +252,11 @@
             <span class="price-now">${money(product.price, product.currency)}</span>
             ${compareHtml}
           </div>
+          ${product.total_reviews > 0 ? `
+            <div class="rating-row">
+              <span class="rating-stars">${starString(product.rating)}</span>
+              <span>${product.rating} (${product.total_reviews} review${product.total_reviews === 1 ? "" : "s"})</span>
+            </div>` : `<div class="rating-row">No reviews yet</div>`}
           ${stockHtml}
           <p class="description">${product.description || "No description provided for this product yet."}</p>
 
