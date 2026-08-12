@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Profile — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo img { width: 30px; height: 30px; }
+  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
+  .nav-links a { font-size: 14px; font-weight: 500; }
+
+  .page-head { padding: 32px 6vw 8px; }
+  .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
+
+  .content { max-width: 680px; margin: 0 auto; padding: 20px 6vw 72px; }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .panel-head h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); }
+  .add-btn { background: var(--orange-500); color: var(--white); border: none; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font-body); }
+  .add-btn:hover { background: #e06f00; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field input { width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; font-size: 14px; font-family: var(--font-body); }
+  .field input:disabled { background: var(--bg); color: var(--muted); }
+  .field .hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .save-btn { background: var(--navy-700); color: var(--white); border: none; padding: 12px 24px; border-radius: 9px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: var(--font-body); }
+  .save-btn:hover { background: var(--navy-900); }
+  .save-btn:disabled { background: #9099c4; cursor: not-allowed; }
+  .save-note { font-size: 12.5px; color: var(--success); margin-left: 12px; display: none; }
+  .save-note.show { display: inline; }
+
+  .address-card {
+    border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+  }
+  .address-card.default { border-color: var(--navy-500); background: #f5f6ff; }
+  .address-main { flex: 1; min-width: 200px; }
+  .address-label-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .address-label { font-size: 14px; font-weight: 700; }
+  .default-tag { font-size: 10.5px; font-weight: 700; color: var(--navy-700); background: #e8ecfb; padding: 2px 8px; border-radius: 10px; }
+  .address-text { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .address-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .address-actions button {
+    background: none; border: 1px solid var(--line); color: var(--ink); padding: 6px 12px;
+    border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body);
+  }
+  .address-actions button:hover { background: var(--bg); }
+  .address-actions .delete-btn { color: var(--danger); border-color: #f5c6c2; }
+  .address-actions .delete-btn:hover { background: #fdecea; }
+  .address-actions .default-btn { color: var(--navy-700); border-color: var(--navy-500); }
+
+  .empty-mini { text-align: center; padding: 30px 16px; color: var(--muted); font-size: 13.5px; }
+
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(15,26,92,0.45);
+    align-items: center; justify-content: center; padding: 20px; z-index: 100;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal { background: var(--white); border-radius: 16px; padding: 26px; width: 100%; max-width: 420px; }
+  .modal h3 { font-family: var(--font-display); font-size: 18px; color: var(--navy-900); margin-bottom: 18px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+  .modal-actions button { flex: 1; padding: 12px 0; border-radius: 9px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: var(--font-body); border: none; }
+  .modal-cancel { background: var(--bg); color: var(--ink); border: 1px solid var(--line) !important; }
+  .modal-submit { background: var(--orange-500); color: var(--white); }
+  .modal-submit:hover { background: #e06f00; }
+  .modal-submit:disabled { background: #f3b877; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="/">
+    <img src="/assets/images/jwings-logo.png" alt="JWings" />
+    <span>JWings Logistics</span>
+  </a>
+  <div class="nav-links">
+    <a href="/customer/dashboard.html">My Dashboard</a>
+  </div>
+</nav>
+
+<div class="page-head">
+  <h1>My Profile</h1>
+</div>
+
+<div class="content">
+  <div class="panel">
+    <div class="panel-head"><h3>Personal information</h3></div>
+    <form id="profileForm">
+      <div class="field">
+        <label for="fullName">Full name</label>
+        <input type="text" id="fullName" required />
+      </div>
+      <div class="field">
+        <label for="email">Email address</label>
+        <input type="email" id="email" disabled />
+        <div class="hint">Your email can't be changed here.</div>
+      </div>
+      <div class="field">
+        <label for="phone">Phone number</label>
+        <input type="tel" id="phone" placeholder="0810 000 0000" />
+      </div>
+      <button type="submit" class="save-btn" id="saveProfileBtn">Save changes</button>
+      <span class="save-note" id="saveNote">✓ Saved</span>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Saved addresses</h3>
+      <button class="add-btn" id="addAddressBtn">+ Add address</button>
+    </div>
+    <div id="addressList"><div class="empty-mini">Loading...</div></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="addressModal">
+  <div class="modal">
+    <h3 id="addressModalTitle">Add address</h3>
+    <div class="field">
+      <label for="addrLabel">Label</label>
+      <input type="text" id="addrLabel" placeholder="e.g. Home, Office" />
+    </div>
+    <div class="field">
+      <label for="addrFull">Full address</label>
+      <input type="text" id="addrFull" placeholder="Street, area, landmark..." required />
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label for="addrCity">City</label>
+        <input type="text" id="addrCity" required />
+      </div>
+      <div class="field">
+        <label for="addrState">State</label>
+        <input type="text" id="addrState" required />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="addrCancelBtn" type="button">Cancel</button>
+      <button class="modal-submit" id="addrSaveBtn" type="button">Save address</button>
+    </div>
+  </div>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/customer/profile.html";
+
+  let myProfile = null;
+  let editingAddressId = null;
+
+  async function init() {
+    myProfile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!myProfile) return;
+
+    document.getElementById("fullName").value = myProfile.full_name || "";
+    document.getElementById("email").value = myProfile.email || "";
+    document.getElementById("phone").value = myProfile.phone || "";
+
+    await loadAddresses();
+  }
+
+  document.getElementById("profileForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("saveProfileBtn");
+    const note = document.getElementById("saveNote");
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+    note.classList.remove("show");
+
+    try {
+      await window.JWingsDB.update("profiles", `id=eq.${myProfile.id}`, {
+        full_name: document.getElementById("fullName").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+      }, session.access_token);
+      note.classList.add("show");
+      setTimeout(() => note.classList.remove("show"), 2500);
+    } catch (err) {
+      alert("Couldn't save your changes. Please try again.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Save changes";
+    }
+  });
+
+  async function loadAddresses() {
+    const list = document.getElementById("addressList");
+    try {
+      const addresses = await window.JWingsDB.select(
+        "addresses", `select=*&user_id=eq.${myProfile.id}&order=is_default.desc,created_at.desc`, session.access_token
+      );
+
+      if (addresses.length === 0) {
+        list.innerHTML = `<div class="empty-mini">No saved addresses yet. Add one to speed up checkout.</div>`;
+        return;
+      }
+
+      list.innerHTML = addresses.map(a => `
+        <div class="address-card ${a.is_default ? "default" : ""}">
+          <div class="address-main">
+            <div class="address-label-row">
+              <span class="address-label">${a.label || "Address"}</span>
+              ${a.is_default ? `<span class="default-tag">Default</span>` : ""}
+            </div>
+            <div class="address-text">${a.full_address}<br/>${a.city}${a.state ? ", " + a.state : ""}</div>
+          </div>
+          <div class="address-actions">
+            ${!a.is_default ? `<button class="default-btn" data-action="default" data-id="${a.id}">Set default</button>` : ""}
+            <button data-action="edit" data-id="${a.id}"
+              data-label="${a.label || ""}" data-full="${a.full_address}" data-city="${a.city || ""}" data-state="${a.state || ""}">Edit</button>
+            <button class="delete-btn" data-action="delete" data-id="${a.id}">Delete</button>
+          </div>
+        </div>`).join("");
+
+      attachAddressHandlers();
+    } catch (err) {
+      list.innerHTML = `<div class="empty-mini">Couldn't load your addresses.</div>`;
+    }
+  }
+
+  function attachAddressHandlers() {
+    document.querySelectorAll('[data-action="edit"]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        editingAddressId = btn.getAttribute("data-id");
+        document.getElementById("addressModalTitle").textContent = "Edit address";
+        document.getElementById("addrLabel").value = btn.getAttribute("data-label");
+        document.getElementById("addrFull").value = btn.getAttribute("data-full");
+        document.getElementById("addrCity").value = btn.getAttribute("data-city");
+        document.getElementById("addrState").value = btn.getAttribute("data-state");
+        document.getElementById("addressModal").classList.add("show");
+      });
+    });
+
+    document.querySelectorAll('[data-action="delete"]').forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Remove this address?")) return;
+        try {
+          await window.JWingsDB.remove("addresses", `id=eq.${btn.getAttribute("data-id")}`, session.access_token);
+          await loadAddresses();
+        } catch (err) {
+          alert("Couldn't remove this address.");
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="default"]').forEach(btn => {
+      btn.addEventListener("click", async () => {
+        try {
+          await window.JWingsDB.update("addresses", `user_id=eq.${myProfile.id}`, { is_default: false }, session.access_token);
+          await window.JWingsDB.update("addresses", `id=eq.${btn.getAttribute("data-id")}`, { is_default: true }, session.access_token);
+          await loadAddresses();
+        } catch (err) {
+          alert("Couldn't update your default address.");
+        }
+      });
+    });
+  }
+
+  document.getElementById("addAddressBtn").addEventListener("click", () => {
+    editingAddressId = null;
+    document.getElementById("addressModalTitle").textContent = "Add address";
+    document.getElementById("addrLabel").value = "";
+    document.getElementById("addrFull").value = "";
+    document.getElementById("addrCity").value = "";
+    document.getElementById("addrState").value = "";
+    document.getElementById("addressModal").classList.add("show");
+  });
+
+  document.getElementById("addrCancelBtn").addEventListener("click", () => {
+    document.getElementById("addressModal").classList.remove("show");
+  });
+
+  document.getElementById("addrSaveBtn").addEventListener("click", async () => {
+    const fullAddress = document.getElementById("addrFull").value.trim();
+    const city = document.getElementById("addrCity").value.trim();
+    const state = document.getElementById("addrState").value.trim();
+    const label = document.getElementById("addrLabel").value.trim() || "Address";
+
+    if (!fullAddress || !city || !state) {
+      alert("Please fill in the address, city, and state.");
+      return;
+    }
+
+    const btn = document.getElementById("addrSaveBtn");
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+
+    try {
+      if (editingAddressId) {
+        await window.JWingsDB.update("addresses", `id=eq.${editingAddressId}`, {
+          label, full_address: fullAddress, city, state,
+        }, session.access_token);
+      } else {
+        await window.JWingsDB.insert("addresses", {
+          user_id: myProfile.id, label, full_address: fullAddress, city, state, is_default: false,
+        }, session.access_token);
+      }
+      document.getElementById("addressModal").classList.remove("show");
+      await loadAddresses();
+    } catch (err) {
+      alert("Couldn't save this address. Please try again.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Save address";
+    }
+  });
+
+  init();
+</script>
+</body>
+</html>
