@@ -134,13 +134,22 @@
         address = addresses[0];
       }
 
-      render(order, items, address);
+      let shipments = [];
+      try {
+        shipments = await window.JWingsDB.select(
+          "shipments", `select=*&order_id=eq.${orderId}&order=created_at.asc`, session.access_token
+        );
+      } catch (e) {
+        // Older orders placed before shipment tracking existed won't have any — that's fine.
+      }
+
+      render(order, items, address, shipments);
     } catch (err) {
       document.getElementById("content").innerHTML = `<div class="error-state">Couldn't load this order right now. Please refresh.</div>`;
     }
   }
 
-  function render(order, items, address) {
+  function render(order, items, address, shipments) {
     document.title = `Order ${order.order_number} — JWings Logistics`;
 
     const itemsHtml = items.map(i => `
@@ -159,6 +168,24 @@
         <div>${address.full_address}</div>
         <div>${address.city}${address.state ? ", " + address.state : ""}</div>
       </div>` : `<div class="address-block">No delivery address on file.</div>`;
+
+    const SHIPMENT_LABELS = {
+      order_received: "Order received", rider_assigned: "Rider assigned", picked_up: "Picked up",
+      in_transit: "In transit", arriving_soon: "Arriving soon", delivered: "Delivered", cancelled: "Cancelled",
+    };
+
+    const trackingHtml = (shipments && shipments.length > 0) ? `
+      <div class="panel">
+        <h3>Track this order</h3>
+        ${shipments.map(s => `
+          <div class="item-row">
+            <div class="item-main">
+              <div class="item-name">${s.tracking_id}</div>
+              <div class="item-qty">Delivery status: <span class="status-pill status-${s.status}" style="padding:2px 8px; font-size:11px;">${SHIPMENT_LABELS[s.status] || s.status}</span></div>
+            </div>
+            <a href="/customer/track.html?code=${s.tracking_id}" style="background:#1a237e; color:white; padding:9px 16px; border-radius:8px; font-size:13px; font-weight:700;">Track</a>
+          </div>`).join("")}
+      </div>` : "";
 
     document.getElementById("content").innerHTML = `
       <div class="order-head">
@@ -183,6 +210,8 @@
           ${order.order_notes ? `<br/>Note: ${order.order_notes}` : ""}
         </div>
       </div>
+
+      ${trackingHtml}
 
       <div class="panel">
         <h3>Payment summary</h3>

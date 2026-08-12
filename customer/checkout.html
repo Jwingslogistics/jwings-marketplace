@@ -275,13 +275,50 @@
         }, session.access_token);
       }
 
+      // Create a trackable shipment for each vendor represented in this order
+      // (most orders are single-vendor, but a cart can span more than one).
+      const uniqueVendorIds = [...new Set(cart.map(i => i.vendor_id))];
+      const vendors = await window.JWingsDB.select(
+        "vendors", `select=id,store_name,city,state&id=in.(${uniqueVendorIds.join(",")})`, session.access_token
+      );
+
+      function generateTrackingId() {
+        const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+        return `JWT-${Date.now().toString().slice(-6)}${rand}`;
+      }
+
+      const trackingIds = [];
+      for (const vendorId of uniqueVendorIds) {
+        const vendor = vendors.find(v => v.id === vendorId);
+        const trackingId = generateTrackingId();
+        trackingIds.push(trackingId);
+
+        await window.JWingsDB.insert("shipments", {
+          tracking_id: trackingId,
+          order_id: order.id,
+          sender_id: profile.id,
+          pickup_address: vendor ? `${vendor.store_name}, ${vendor.city || ""}${vendor.state ? ", " + vendor.state : ""}` : "Vendor location",
+          dropoff_address: `${fullAddress}, ${city}, ${state}`,
+          recipient_name: profile.full_name,
+          recipient_phone: profile.phone || "",
+          package_type: "parcel",
+          package_weight_kg: 1,
+          delivery_type: selectedDeliveryType,
+          delivery_fee: selectedFee,
+          currency: currency,
+          payment_status: "unpaid",
+          status: "order_received",
+        }, session.access_token);
+      }
+
       localStorage.removeItem("jwings_cart");
 
       document.getElementById("pageContent").innerHTML = `
         <div class="confirm-state">
           <div class="icon">🎉</div>
           <h2>Order placed!</h2>
-          <p>Order <strong>${orderNumber}</strong> has been sent to the vendor. You'll be able to track it from your dashboard.</p>
+          <p>Order <strong>${orderNumber}</strong> has been sent to the vendor.</p>
+          <p style="font-size:13.5px; margin-top:-4px;">Tracking ID${trackingIds.length > 1 ? "s" : ""}: <strong>${trackingIds.join(", ")}</strong></p>
           <a href="/customer/order-detail.html?id=${order.id}" style="margin-right:10px;">Track this order</a>
           <a href="/customer/dashboard.html" style="background:transparent; color:#1a237e; border:1.5px solid #1a237e;">My dashboard</a>
         </div>`;
