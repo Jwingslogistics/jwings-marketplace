@@ -142,25 +142,24 @@
   const params = new URLSearchParams(window.location.search);
   const productId = params.get("id");
 
+  const session = window.JWingsDB.getSession();
+
   function money(price, currency) {
     const symbol = currency === "NGN" ? "₦" : (currency || "");
     return `${symbol}${Number(price).toLocaleString()}`;
   }
 
-  function getCart() {
-    try { return JSON.parse(localStorage.getItem("jwings_cart") || "[]"); }
-    catch { return []; }
-  }
-  function saveCart(cart) {
-    localStorage.setItem("jwings_cart", JSON.stringify(cart));
-    updateCartBadge();
-  }
-  function updateCartBadge() {
-    const cart = getCart();
-    const count = cart.reduce((sum, i) => sum + i.quantity, 0);
+  async function updateCartBadge() {
     const badge = document.getElementById("cartBadge");
-    if (count > 0) { badge.style.display = "inline-block"; badge.textContent = count; }
-    else { badge.style.display = "none"; }
+    if (!session) { badge.style.display = "none"; return; }
+    try {
+      const items = await window.JWingsDB.select(
+        "cart_items", `select=quantity&customer_id=eq.${session.user.id}`, session.access_token
+      );
+      const count = items.reduce((sum, i) => sum + i.quantity, 0);
+      if (count > 0) { badge.style.display = "inline-block"; badge.textContent = count; }
+      else { badge.style.display = "none"; }
+    } catch (err) { /* non-critical, ignore */ }
   }
 
   function showToast(msg) {
@@ -288,35 +287,58 @@
     document.getElementById("qtyPlus").addEventListener("click", () => {
       if (qty < product.stock) { qty++; document.getElementById("qtyValue").textContent = qty; }
     });
-    document.getElementById("addToCartBtn").addEventListener("click", () => {
-      addToCart();
-      showToast("Added to cart");
+    document.getElementById("addToCartBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("addToCartBtn");
+      btn.disabled = true;
+      try {
+        await addToCart();
+        showToast("Added to cart");
+      } catch (err) {
+        showToast(err.message || "Couldn't add to cart. Please try again.");
+      } finally {
+        btn.disabled = product.stock === 0;
+      }
     });
-    document.getElementById("buyNowBtn").addEventListener("click", () => {
-      addToCart();
-      window.location.href = "/customer/cart.html";
+    document.getElementById("buyNowBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("buyNowBtn");
+      btn.disabled = true;
+      try {
+        await addToCart();
+        window.location.href = "/customer/cart.html";
+      } catch (err) {
+        showToast(err.message || "Couldn't add to cart. Please try again.");
+        btn.disabled = product.stock === 0;
+      }
     });
   }
 
-  function addToCart() {
-    const cart = getCart();
-    const existing = cart.find(i => i.product_id === product.id);
-    if (existing) {
-      existing.quantity = Math.min(existing.quantity + qty, product.stock);
-    } else {
-      cart.push({
-        product_id: product.id,
-        name: product.name,
-        price: product.price,
-        currency: product.currency,
-        vendor_id: product.vendor_id,
-        vendor_name: product.vendors ? product.vendors.store_name : "JWings Vendor",
-        image: (product.images && product.images[0]) || null,
-        quantity: qty,
-        stock: product.stock,
-      });
+  async function addToCart() {
+    if (!session) {
+      sessionStorage.setItem("jwings_redirect_after_login", window.location.href);
+      window.location.href = "/customer/login.html";
+      return;
     }
-    saveCart(cart);
+
+    // No variants in the UI yet, so variant is always null — look for an
+    // existing row for this exact (customer, product) pair first.
+    const existing = await window.JWingsDB.select(
+      "cart_items",
+      `select=id,quantity&customer_id=eq.${session.user.id}&product_id=eq.${product.id}&variant=is.null&limit=1`,
+      session.access_token
+    );
+
+    if (existing[0]) {
+      const newQty = Math.min(existing[0].quantity + qty, product.stock);
+      await window.JWingsDB.update("cart_items", `id=eq.${existing[0].id}`, { quantity: newQty }, session.access_token);
+    } else {
+      await window.JWingsDB.insert("cart_items", {
+        customer_id: session.user.id,
+        product_id: product.id,
+        quantity: qty,
+      }, session.access_token);
+    }
+
+    await updateCartBadge();
   }
 
   updateCartBadge();

@@ -165,18 +165,44 @@
   const session = window.JWingsDB.getSession();
   if (!session) window.location.href = "/customer/login.html";
 
-  function getCart() {
-    try { return JSON.parse(localStorage.getItem("jwings_cart") || "[]"); }
-    catch { return []; }
-  }
   function money(amount, currency) {
     const symbol = currency === "NGN" ? "₦" : (currency || "");
     return `${symbol}${Number(amount).toLocaleString()}`;
   }
 
-  const cart = getCart();
-  if (cart.length === 0) {
-    window.location.href = "/customer/cart.html";
+  let cart = [];
+
+  async function initCheckout() {
+    try {
+      const rows = await window.JWingsDB.select(
+        "cart_items",
+        `select=*,products(id,name,price,currency,stock,vendor_id,vendors(store_name,city,state))&customer_id=eq.${session.user.id}`,
+        session.access_token
+      );
+      // Flatten into the same shape the rest of this file already expects.
+      cart = rows.filter(r => r.products).map(r => ({
+        cart_item_id: r.id,
+        product_id: r.products.id,
+        name: r.products.name,
+        price: r.products.price,
+        currency: r.products.currency,
+        vendor_id: r.products.vendor_id,
+        vendor_name: r.products.vendors ? r.products.vendors.store_name : "JWings Vendor",
+        vendor_city: r.products.vendors ? r.products.vendors.city : null,
+        vendor_state: r.products.vendors ? r.products.vendors.state : null,
+        quantity: r.quantity,
+        stock: r.products.stock,
+      }));
+
+      if (cart.length === 0) {
+        window.location.href = "/customer/cart.html";
+        return;
+      }
+
+      renderSummary();
+    } catch (err) {
+      showError("Couldn't load your cart right now. Please refresh.");
+    }
   }
 
   function renderSummary() {
@@ -311,7 +337,8 @@
         }, session.access_token);
       }
 
-      localStorage.removeItem("jwings_cart");
+      // Clear the cart now that the order (and shipments) exist.
+      await window.JWingsDB.remove("cart_items", `customer_id=eq.${session.user.id}`, session.access_token);
 
       document.getElementById("pageContent").innerHTML = `
         <div class="confirm-state">
@@ -329,7 +356,7 @@
     }
   });
 
-  renderSummary();
+  initCheckout();
 </script>
 </body>
 </html>

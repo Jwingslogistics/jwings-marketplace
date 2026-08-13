@@ -103,24 +103,39 @@
 
 <script src="/shared/supabase-client.js"></script>
 <script>
-  function getCart() {
-    try { return JSON.parse(localStorage.getItem("jwings_cart") || "[]"); }
-    catch { return []; }
+  const session = window.JWingsDB.getSession();
+  if (!session) {
+    sessionStorage.setItem("jwings_redirect_after_login", window.location.href);
+    window.location.href = "/customer/login.html";
   }
-  function saveCart(cart) {
-    localStorage.setItem("jwings_cart", JSON.stringify(cart));
-  }
+
   function money(amount, currency) {
     const symbol = currency === "NGN" ? "₦" : (currency || "");
     return `${symbol}${Number(amount).toLocaleString()}`;
   }
 
+  let cartRows = []; // raw cart_items rows with embedded product+vendor, kept for re-render after an update
+
+  async function loadCart() {
+    try {
+      const items = await window.JWingsDB.select(
+        "cart_items",
+        `select=*,products(id,name,price,currency,stock,images,vendor_id,vendors(store_name))&customer_id=eq.${session.user.id}&order=created_at.desc`,
+        session.access_token
+      );
+      cartRows = items.filter(i => i.products); // drop rows whose product was deleted
+      render();
+    } catch (err) {
+      document.getElementById("itemsList").innerHTML = `<div class="empty-cart"><h3>Couldn't load your cart</h3><p>Please refresh the page.</p></div>`;
+      document.getElementById("summaryPanel").style.display = "none";
+    }
+  }
+
   function render() {
-    const cart = getCart();
     const itemsList = document.getElementById("itemsList");
     const summaryPanel = document.getElementById("summaryPanel");
 
-    if (cart.length === 0) {
+    if (cartRows.length === 0) {
       itemsList.innerHTML = `
         <div class="empty-cart">
           <div class="icon">🛒</div>
@@ -134,56 +149,64 @@
 
     summaryPanel.style.display = "block";
 
-    itemsList.innerHTML = cart.map((item, idx) => {
-      const thumb = item.image ? `<img src="${item.image}" alt="${item.name}" />` : "📦";
+    itemsList.innerHTML = cartRows.map((row) => {
+      const p = row.products;
+      const thumb = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.name}" />` : "📦";
       return `
         <div class="cart-item">
           <div class="item-thumb">${thumb}</div>
           <div class="item-info">
-            <div class="item-vendor">${item.vendor_name}</div>
-            <div class="item-name">${item.name}</div>
-            <div class="item-price">${money(item.price, item.currency)} each</div>
+            <div class="item-vendor">${p.vendors ? p.vendors.store_name : "JWings Vendor"}</div>
+            <div class="item-name">${p.name}</div>
+            <div class="item-price">${money(p.price, p.currency)} each</div>
           </div>
           <div class="item-controls">
             <div class="qty-control">
-              <button data-idx="${idx}" data-action="minus" type="button">−</button>
-              <span>${item.quantity}</span>
-              <button data-idx="${idx}" data-action="plus" type="button">+</button>
+              <button data-id="${row.id}" data-stock="${p.stock}" data-action="minus" type="button">−</button>
+              <span>${row.quantity}</span>
+              <button data-id="${row.id}" data-stock="${p.stock}" data-action="plus" type="button">+</button>
             </div>
-            <button class="remove-btn" data-idx="${idx}" data-action="remove" type="button">Remove</button>
+            <button class="remove-btn" data-id="${row.id}" data-action="remove" type="button">Remove</button>
           </div>
-          <div class="item-total">${money(item.price * item.quantity, item.currency)}</div>
+          <div class="item-total">${money(p.price * row.quantity, p.currency)}</div>
         </div>`;
     }).join("");
 
-    const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const currency = cart[0].currency;
+    const subtotal = cartRows.reduce((sum, row) => sum + row.products.price * row.quantity, 0);
+    const currency = cartRows[0].products.currency;
     document.getElementById("sumSubtotal").textContent = money(subtotal, currency);
 
     itemsList.querySelectorAll("[data-action]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const idx = parseInt(btn.getAttribute("data-idx"), 10);
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
         const action = btn.getAttribute("data-action");
-        const cart = getCart();
-        if (action === "plus" && cart[idx].quantity < cart[idx].stock) cart[idx].quantity++;
-        if (action === "minus") { cart[idx].quantity--; if (cart[idx].quantity <= 0) cart.splice(idx, 1); }
-        if (action === "remove") cart.splice(idx, 1);
-        saveCart(cart);
-        render();
+        const stock = parseInt(btn.getAttribute("data-stock") || "0", 10);
+        const row = cartRows.find(r => r.id === id);
+        if (!row) return;
+
+        try {
+          if (action === "remove") {
+            await window.JWingsDB.remove("cart_items", `id=eq.${id}`, session.access_token);
+          } else {
+            let newQty = row.quantity + (action === "plus" ? 1 : -1);
+            if (newQty > stock) newQty = stock;
+            if (newQty <= 0) {
+              await window.JWingsDB.remove("cart_items", `id=eq.${id}`, session.access_token);
+            } else {
+              await window.JWingsDB.update("cart_items", `id=eq.${id}`, { quantity: newQty }, session.access_token);
+            }
+          }
+          await loadCart();
+        } catch (err) { /* leave UI as-is on failure */ }
       });
     });
   }
 
   document.getElementById("checkoutBtn").addEventListener("click", () => {
-    const session = window.JWingsDB.getSession();
-    if (!session) {
-      window.location.href = "/customer/login.html";
-      return;
-    }
     window.location.href = "/customer/checkout.html";
   });
 
-  render();
+  loadCart();
 </script>
 </body>
 </html>
