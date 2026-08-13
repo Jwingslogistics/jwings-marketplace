@@ -102,6 +102,13 @@
   .image-picker-text { font-size: 13px; color: var(--muted); text-align: left; }
   .image-picker-text .fname { color: var(--ink); font-weight: 600; }
   .upload-progress { font-size: 12.5px; color: var(--orange-500); margin-top: 6px; }
+
+  .status-banner {
+    padding: 14px 18px; border-radius: 12px; font-size: 13.5px; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .status-banner.pending { background: #fff4e5; color: #8a5a00; border: 1px solid #ffdba3; }
+  .status-banner.suspended { background: #fdecea; color: #a5322a; border: 1px solid #f5c6c2; }
 </style>
 </head>
 <body>
@@ -122,6 +129,8 @@
   </aside>
 
   <main class="main">
+    <div class="status-banner" id="statusBanner" style="display:none;"></div>
+
     <div class="top-row">
       <div>
         <h1>Products</h1>
@@ -226,6 +235,24 @@
     }
 
     document.getElementById("pPrice").placeholder = `Price in ${vendor.currency}`;
+
+    const banner = document.getElementById("statusBanner");
+    const openBtn = document.getElementById("openModalBtn");
+    if (vendor.status === "pending") {
+      banner.className = "status-banner pending";
+      banner.style.display = "flex";
+      banner.innerHTML = `⏳ <span>Your store is awaiting admin approval — you can't add products until it's approved.</span>`;
+      openBtn.disabled = true;
+      openBtn.style.opacity = "0.5";
+      openBtn.style.cursor = "not-allowed";
+    } else if (vendor.status === "suspended") {
+      banner.className = "status-banner suspended";
+      banner.style.display = "flex";
+      banner.innerHTML = `⚠️ <span>Your store has been suspended. You can't add or edit products right now.</span>`;
+      openBtn.disabled = true;
+      openBtn.style.opacity = "0.5";
+      openBtn.style.cursor = "not-allowed";
+    }
 
     await loadCategories();
     await loadProducts();

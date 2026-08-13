@@ -93,7 +93,8 @@
       const profile = await window.JWingsDB.getMyProfile(session.access_token);
       if (!profile) throw new Error("Couldn't find your profile. Please log in again.");
 
-      // Auto-approve for now (vendor approval workflow can be added later).
+      // Vendors now start pending and need admin approval (admin/vendors.html)
+      // before they can list products or appear in the marketplace.
       await window.JWingsDB.insert("vendors", {
         profile_id: profile.id,
         store_name: storeName,
@@ -102,12 +103,12 @@
         city: city || null,
         state: state || null,
         currency: currency,
-        status: "active",
+        status: "pending",
       }, session.access_token);
 
       await window.JWingsDB.update("profiles", `id=eq.${profile.id}`, { role: "vendor" }, session.access_token);
 
-      window.location.href = "/vendor/dashboard.html";
+      window.location.href = "/vendor/dashboard.html?pending=1";
     } catch (err) {
       showError(err.message || "Something went wrong setting up your store.");
       submitBtn.disabled = false;

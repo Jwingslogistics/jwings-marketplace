@@ -51,6 +51,13 @@
   .empty-mini .icon { font-size: 30px; margin-bottom: 10px; }
   .empty-mini a { display: inline-block; margin-top: 14px; background: var(--navy-700); color: var(--white); padding: 10px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600; }
   .empty-mini a:hover { background: var(--navy-900); }
+
+  .status-banner {
+    padding: 14px 18px; border-radius: 12px; font-size: 13.5px; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .status-banner.pending { background: #fff4e5; color: #8a5a00; border: 1px solid #ffdba3; }
+  .status-banner.suspended { background: #fdecea; color: #a5322a; border: 1px solid #f5c6c2; }
 </style>
 </head>
 <body>
@@ -72,12 +79,14 @@
   </aside>
 
   <main class="main">
+    <div class="status-banner" id="statusBanner" style="display:none;"></div>
+
     <div class="top-row">
       <div>
         <h1 id="storeNameHeading">Your store</h1>
         <p id="storeSubtext">Loading your dashboard...</p>
       </div>
-      <a class="add-btn" href="/vendor/products.html">+ Add product</a>
+      <a class="add-btn" href="/vendor/products.html" id="addProductBtn">+ Add product</a>
     </div>
 
     <div class="stat-grid">
@@ -139,6 +148,22 @@
       document.getElementById("statWallet").textContent = money(vendor.wallet_balance, vendor.currency);
       document.getElementById("statRating").textContent = vendor.average_rating > 0 ? `${vendor.average_rating}★` : "No ratings yet";
 
+      const banner = document.getElementById("statusBanner");
+      const addBtn = document.getElementById("addProductBtn");
+      if (vendor.status === "pending") {
+        banner.className = "status-banner pending";
+        banner.style.display = "flex";
+        banner.innerHTML = `⏳ <span>Your store is awaiting admin approval. You'll be able to add products once it's approved.</span>`;
+        addBtn.style.pointerEvents = "none";
+        addBtn.style.opacity = "0.5";
+      } else if (vendor.status === "suspended") {
+        banner.className = "status-banner suspended";
+        banner.style.display = "flex";
+        banner.innerHTML = `⚠️ <span>Your store has been suspended. Contact JWings support for details.</span>`;
+        addBtn.style.pointerEvents = "none";
+        addBtn.style.opacity = "0.5";
+      }
+
       const products = await window.JWingsDB.select(
         "products",
         `select=*&vendor_id=eq.${vendor.id}&order=created_at.desc&limit=5`,
@@ -146,7 +171,13 @@
       );
 
       document.getElementById("statProducts").textContent = products.length;
-      document.getElementById("statOrders").textContent = "0"; // wired up once order flow exists
+
+      const orderItems = await window.JWingsDB.select(
+        "order_items",
+        `select=id&vendor_id=eq.${vendor.id}`,
+        session.access_token
+      );
+      document.getElementById("statOrders").textContent = orderItems.length;
 
       const recentEl = document.getElementById("recentProducts");
       if (products.length === 0) {
