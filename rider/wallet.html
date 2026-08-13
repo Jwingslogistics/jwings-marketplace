@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Wallet — JWings Vendor</title>
+<title>Earnings — JWings Rider</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -18,21 +18,25 @@
   body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
   a { text-decoration: none; color: inherit; }
 
-  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo img { width: 30px; height: 30px; }
+  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
+  .nav-links { display: flex; align-items: center; gap: 18px; }
+  .nav-links a { font-size: 14px; font-weight: 500; }
+  .logout-btn { background: none; border: none; color: var(--muted); font-size: 13.5px; cursor: pointer; font-family: var(--font-body); }
+  .logout-btn:hover { color: var(--danger); }
 
-  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
-  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
-  .side-logo img { width: 26px; height: 26px; }
-  .side-logo span { font-weight: 700; font-size: 14.5px; }
-  .side nav { display: flex; flex-direction: column; gap: 4px; }
-  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
-  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .page-head { padding: 32px 6vw 8px; }
+  .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
+  .page-head p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
 
-  .main { padding: 32px 4vw 64px; }
-  .top-row { margin-bottom: 24px; }
-  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
-  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  .content { max-width: 720px; margin: 0 auto; padding: 20px 6vw 72px; }
 
   .wallet-hero {
     background: linear-gradient(150deg, var(--navy-900), var(--navy-700));
@@ -47,7 +51,6 @@
     border-radius: 10px; font-weight: 700; font-size: 14.5px; cursor: pointer; font-family: var(--font-body);
   }
   .withdraw-btn:hover { background: #e06f00; }
-  .withdraw-btn:disabled { background: rgba(245,124,0,0.5); cursor: not-allowed; }
 
   .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 24px; }
   @media (max-width: 700px) { .stat-grid { grid-template-columns: 1fr; } }
@@ -63,7 +66,6 @@
   .tx-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
   .tx-icon.credit { background: #e9f9f1; }
   .tx-icon.withdrawal { background: #fdecea; }
-  .tx-icon.commission { background: #fff4e5; }
   .tx-main { flex: 1; min-width: 150px; }
   .tx-desc { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
   .tx-date { font-size: 12px; color: var(--muted); }
@@ -97,46 +99,41 @@
 </head>
 <body>
 
-<div class="shell">
-  <aside class="side">
-    <div class="side-logo">
-      <img src="/assets/images/jwings-logo.png" alt="JWings" />
-      <span>JWings Vendor</span>
-    </div>
-    <nav>
-      <a href="/vendor/dashboard.html">Overview</a>
-      <a href="/vendor/products.html">Products</a>
-      <a href="/vendor/orders.html">Orders</a>
-      <a href="/vendor/analytics.html">Analytics</a>
-      <a class="active" href="/vendor/wallet.html">Wallet</a>
-    </nav>
-  </aside>
+<nav class="nav">
+  <a class="nav-logo" href="/rider/dashboard.html">
+    <img src="/assets/images/jwings-logo.png" alt="JWings" />
+    <span>JWings Rider</span>
+  </a>
+  <div class="nav-links">
+    <a href="/rider/dashboard.html">Deliveries</a>
+    <button class="logout-btn" id="logoutBtn">Log out</button>
+  </div>
+</nav>
 
-  <main class="main">
-    <div class="top-row">
-      <h1>Wallet</h1>
-      <p>Your earnings, minus commission, land here as orders are completed.</p>
-    </div>
+<div class="page-head">
+  <h1>Earnings</h1>
+  <p>Your delivery fees land here as soon as a job is marked delivered.</p>
+</div>
 
-    <div class="wallet-hero">
-      <div>
-        <div class="label">Available balance</div>
-        <div class="balance" id="walletBalance">—</div>
-      </div>
-      <button class="withdraw-btn" id="withdrawBtn">Request withdrawal</button>
+<div class="content">
+  <div class="wallet-hero">
+    <div>
+      <div class="label">Available balance</div>
+      <div class="balance" id="walletBalance">—</div>
     </div>
+    <button class="withdraw-btn" id="withdrawBtn">Request withdrawal</button>
+  </div>
 
-    <div class="stat-grid">
-      <div class="stat-card"><div class="label">Total earned</div><div class="value" id="statEarned">—</div></div>
-      <div class="stat-card"><div class="label">Total withdrawn</div><div class="value" id="statWithdrawn">—</div></div>
-      <div class="stat-card"><div class="label">Commission rate</div><div class="value" id="statCommission">—</div></div>
-    </div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">Total earned</div><div class="value" id="statEarned">—</div></div>
+    <div class="stat-card"><div class="label">Total withdrawn</div><div class="value" id="statWithdrawn">—</div></div>
+    <div class="stat-card"><div class="label">Deliveries completed</div><div class="value" id="statDeliveries">—</div></div>
+  </div>
 
-    <div class="panel">
-      <h3>Transaction history</h3>
-      <div id="txList"><div class="empty-mini">Loading...</div></div>
-    </div>
-  </main>
+  <div class="panel">
+    <h3>Transaction history</h3>
+    <div id="txList"><div class="empty-mini">Loading...</div></div>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="withdrawModal">
@@ -145,7 +142,7 @@
     <div class="avail" id="modalAvail">Available: ₦0</div>
     <div class="error-text" id="withdrawError"></div>
     <input type="number" id="withdrawAmount" min="1" step="0.01" placeholder="Amount to withdraw" />
-    <div style="font-size:12px; color:#666a80; margin-bottom:8px;">Withdrawal requests are reviewed and processed manually for now.</div>
+    <div style="font-size:12px; color:#666a80; margin-bottom:8px;">This deducts from your balance immediately. Actual bank transfer isn't automated yet — payouts are still sent manually.</div>
     <div class="modal-actions">
       <button class="modal-cancel" id="withdrawCancelBtn" type="button">Cancel</button>
       <button class="modal-submit" id="withdrawSubmitBtn" type="button">Submit request</button>
@@ -156,57 +153,65 @@
 <script src="/shared/supabase-client.js"></script>
 <script>
   const session = window.JWingsDB.getSession();
-  if (!session) window.location.href = "/customer/login.html?redirect=/vendor/wallet.html";
+  if (!session) window.location.href = "/customer/login.html?redirect=/rider/wallet.html";
 
-  let vendor = null;
+  let rider = null;
 
   function money(amount, currency) {
     const symbol = currency === "NGN" ? "₦" : (currency || "");
     return `${symbol}${Number(amount || 0).toLocaleString()}`;
   }
 
-  const TX_ICONS = { credit: "💰", withdrawal: "🏦", commission: "📊", debit: "➖", refund: "↩️" };
+  const TX_ICONS = { credit: "💰", withdrawal: "🏦" };
 
   async function init() {
     const profile = await window.JWingsDB.getMyProfile(session.access_token);
-    if (!profile || profile.role !== "vendor") {
-      window.location.href = "/vendor/onboarding.html";
+    if (!profile || profile.role !== "rider") {
+      window.location.href = "/customer/dashboard.html";
       return;
     }
 
-    const vendors = await window.JWingsDB.select("vendors", `select=*&profile_id=eq.${profile.id}&limit=1`, session.access_token);
-    vendor = vendors[0];
-    if (!vendor) {
-      window.location.href = "/vendor/onboarding.html";
-      return;
-    }
+    const riders = await window.JWingsDB.select("riders", `select=*&profile_id=eq.${profile.id}&limit=1`, session.access_token);
+    rider = riders[0];
+    if (!rider) return;
 
-    document.getElementById("walletBalance").textContent = money(vendor.wallet_balance, vendor.currency);
-    document.getElementById("statCommission").textContent = `${vendor.commission_rate}%`;
-    document.getElementById("modalAvail").textContent = `Available: ${money(vendor.wallet_balance, vendor.currency)}`;
+    document.getElementById("walletBalance").textContent = money(rider.wallet_balance, "NGN");
+    document.getElementById("modalAvail").textContent = `Available: ${money(rider.wallet_balance, "NGN")}`;
 
     await loadTransactions();
+    await loadDeliveryCount();
+  }
+
+  async function loadDeliveryCount() {
+    try {
+      const delivered = await window.JWingsDB.select(
+        "shipments", `select=id&rider_id=eq.${rider.id}&status=eq.delivered`, session.access_token
+      );
+      document.getElementById("statDeliveries").textContent = delivered.length;
+    } catch (err) {
+      document.getElementById("statDeliveries").textContent = "—";
+    }
   }
 
   async function loadTransactions() {
     const list = document.getElementById("txList");
     try {
       const txs = await window.JWingsDB.select(
-        "wallet_transactions", `select=*&vendor_id=eq.${vendor.id}&order=created_at.desc&limit=30`, session.access_token
+        "wallet_transactions", `select=*&rider_id=eq.${rider.id}&order=created_at.desc&limit=30`, session.access_token
       );
 
       const earned = txs.filter(t => t.type === "credit").reduce((sum, t) => sum + Number(t.amount), 0);
       const withdrawn = txs.filter(t => t.type === "withdrawal").reduce((sum, t) => sum + Number(t.amount), 0);
-      document.getElementById("statEarned").textContent = money(earned, vendor.currency);
-      document.getElementById("statWithdrawn").textContent = money(withdrawn, vendor.currency);
+      document.getElementById("statEarned").textContent = money(earned, "NGN");
+      document.getElementById("statWithdrawn").textContent = money(withdrawn, "NGN");
 
       if (txs.length === 0) {
-        list.innerHTML = `<div class="empty-mini">No transactions yet — earnings appear here once orders are marked completed.</div>`;
+        list.innerHTML = `<div class="empty-mini">No transactions yet — earnings appear here once you deliver your first job.</div>`;
         return;
       }
 
       list.innerHTML = txs.map(t => {
-        const isPositive = t.type === "credit" || t.type === "refund";
+        const isPositive = t.type === "credit";
         return `
           <div class="tx-row">
             <div class="tx-icon ${t.type}">${TX_ICONS[t.type] || "💳"}</div>
@@ -214,7 +219,7 @@
               <div class="tx-desc">${t.description || t.type}</div>
               <div class="tx-date">${new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</div>
             </div>
-            <div class="tx-amount ${isPositive ? "positive" : "negative"}">${isPositive ? "+" : "−"}${money(t.amount, vendor.currency)}</div>
+            <div class="tx-amount ${isPositive ? "positive" : "negative"}">${isPositive ? "+" : "−"}${money(t.amount, "NGN")}</div>
           </div>`;
       }).join("");
     } catch (err) {
@@ -222,7 +227,6 @@
     }
   }
 
-  // ---- Withdrawal modal ----
   const modal = document.getElementById("withdrawModal");
   document.getElementById("withdrawBtn").addEventListener("click", () => {
     document.getElementById("withdrawAmount").value = "";
@@ -243,7 +247,7 @@
       errorEl.classList.add("show");
       return;
     }
-    if (amount > vendor.wallet_balance) {
+    if (amount > rider.wallet_balance) {
       errorEl.textContent = "That's more than your available balance.";
       errorEl.classList.add("show");
       return;
@@ -254,21 +258,29 @@
     btn.textContent = "Submitting...";
 
     try {
-      await window.JWingsDB.rpc("request_vendor_withdrawal", { p_amount: amount }, session.access_token);
+      await window.JWingsDB.rpc("request_rider_withdrawal", { p_amount: amount }, session.access_token);
 
-      const newBalance = vendor.wallet_balance - amount;
-      vendor.wallet_balance = newBalance;
+      const newBalance = rider.wallet_balance - amount;
+      rider.wallet_balance = newBalance;
 
-      document.getElementById("walletBalance").textContent = money(newBalance, vendor.currency);
+      document.getElementById("walletBalance").textContent = money(newBalance, "NGN");
       modal.classList.remove("show");
       await loadTransactions();
     } catch (err) {
-      errorEl.textContent = err.message || "Couldn't submit your request. Please try again.";
+      errorEl.textContent = (err.message || "").includes("exceeds")
+        ? "That's more than your available balance."
+        : "Couldn't submit your request. Please try again.";
       errorEl.classList.add("show");
     } finally {
       btn.disabled = false;
       btn.textContent = "Submit request";
     }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await window.JWingsDB.signOut(session.access_token);
+    window.JWingsDB.clearSession();
+    window.location.href = "/customer/login.html";
   });
 
   init();
