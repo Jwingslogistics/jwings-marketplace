@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Customers — JWings Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .side-foot { margin-top: auto; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer; font-family: var(--font-body); padding: 10px 12px; }
+  .logout-btn:hover { color: var(--white); }
+
+  .main { padding: 32px 4vw 64px; }
+  .top-row { margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .search-box {
+    display: flex; align-items: center; gap: 8px; background: var(--white); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 14px; max-width: 320px; width: 100%;
+  }
+  .search-box input { border: none; outline: none; flex: 1; font-size: 14px; font-family: var(--font-body); background: transparent; }
+
+  .stat-row { display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+  .stat-chip { background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 14px 20px; min-width: 130px; }
+  .stat-chip .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
+  .stat-chip .value { font-family: var(--font-display); font-size: 20px; color: var(--navy-900); font-weight: 600; }
+
+  .customer-table { background: var(--white); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .cust-row {
+    display: grid; grid-template-columns: 1fr 140px 110px 110px; gap: 14px; align-items: center;
+    padding: 15px 20px; border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .cust-row:hover { background: var(--bg); }
+  .cust-row:last-child { border-bottom: none; }
+  .cust-row.head { background: var(--bg); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); font-weight: 700; cursor: default; }
+  .cust-row.head:hover { background: var(--bg); }
+  @media (max-width: 760px) { .cust-row { grid-template-columns: 1fr; gap: 4px; } .cust-row.head { display: none; } }
+
+  .cust-name { font-size: 14px; font-weight: 700; }
+  .cust-contact { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .cust-joined { font-size: 12.5px; color: var(--muted); }
+  .cust-orders { font-size: 13.5px; font-weight: 600; }
+  .cust-spent { font-size: 13.5px; font-weight: 700; color: var(--navy-900); }
+
+  .empty-mini { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 14px; }
+
+  /* ---- Detail drawer ---- */
+  .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(15,26,92,0.35); z-index: 100; }
+  .drawer-overlay.show { display: block; }
+  .drawer {
+    position: fixed; top: 0; right: 0; width: 400px; max-width: 92vw; height: 100vh; background: var(--white);
+    z-index: 101; padding: 28px 24px; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,0.08);
+  }
+  .drawer-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); float: right; }
+  .drawer h2 { font-family: var(--font-display); font-size: 20px; color: var(--navy-900); margin-bottom: 4px; }
+  .drawer .sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .drawer-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+  .drawer-stat { background: var(--bg); border-radius: 10px; padding: 12px 14px; }
+  .drawer-stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .drawer-stat .value { font-size: 16px; font-weight: 700; color: var(--navy-900); margin-top: 3px; }
+  .drawer h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--navy-900); margin-bottom: 10px; }
+  .order-line { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .order-line:last-child { border-bottom: none; }
+  .order-line .num { font-weight: 600; }
+  .order-line .status { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Admin</span>
+    </div>
+    <nav>
+      <a href="/admin/dashboard.html">Overview</a>
+      <a href="/admin/vendors.html">Vendors</a>
+      <a href="/admin/riders.html">Riders</a>
+      <a class="active" href="/admin/customers.html">Customers</a>
+    </nav>
+    <div class="side-foot">
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <div>
+        <h1>Customers</h1>
+        <p>Browse customer accounts and their order activity.</p>
+      </div>
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Search name, email, phone..." />
+      </div>
+    </div>
+
+    <div class="stat-row" id="statRow"></div>
+
+    <div id="customersList"><div class="empty-mini">Loading...</div></div>
+  </main>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay">
+  <div class="drawer" id="drawer" onclick="event.stopPropagation()">
+    <button class="drawer-close" id="drawerClose">✕</button>
+    <h2 id="drawerName">—</h2>
+    <p class="sub" id="drawerContact">—</p>
+    <div class="drawer-stat-grid">
+      <div class="drawer-stat"><div class="label">Total orders</div><div class="value" id="drawerOrders">0</div></div>
+      <div class="drawer-stat"><div class="label">Total spent</div><div class="value" id="drawerSpent">₦0</div></div>
+    </div>
+    <h3>Recent orders</h3>
+    <div id="drawerOrdersList"></div>
+  </div>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/admin/customers.html";
+
+  let customers = [];
+  let ordersByCustomer = {}; // customer_id -> array of orders
+
+  function money(amount, currency) {
+    const symbol = (currency || "NGN") === "NGN" ? "₦" : (currency || "");
+    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  }
+
+  async function init() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "admin") {
+      window.location.href = "/customer/dashboard.html";
+      return;
+    }
+    await loadData();
+  }
+
+  async function loadData() {
+    const container = document.getElementById("customersList");
+    try {
+      const [profiles, orders] = await Promise.all([
+        window.JWingsDB.select("profiles", "select=*&role=eq.customer&order=created_at.desc", session.access_token),
+        window.JWingsDB.select("orders", "select=id,customer_id,total,buyer_currency,status,order_number,created_at&order=created_at.desc", session.access_token),
+      ]);
+
+      customers = profiles;
+      ordersByCustomer = {};
+      orders.forEach((o) => {
+        if (!ordersByCustomer[o.customer_id]) ordersByCustomer[o.customer_id] = [];
+        ordersByCustomer[o.customer_id].push(o);
+      });
+
+      renderStats(orders);
+      render();
+    } catch (err) {
+      container.innerHTML = `<div class="empty-mini">Couldn't load customers right now.</div>`;
+    }
+  }
+
+  function renderStats(orders) {
+    const totalSpent = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+    document.getElementById("statRow").innerHTML = `
+      <div class="stat-chip"><div class="label">Customers</div><div class="value">${customers.length}</div></div>
+      <div class="stat-chip"><div class="label">Total orders</div><div class="value">${orders.length}</div></div>
+      <div class="stat-chip"><div class="label">Total revenue</div><div class="value">${money(totalSpent)}</div></div>
+    `;
+  }
+
+  function render() {
+    const term = document.getElementById("searchInput").value.trim().toLowerCase();
+    let list = customers;
+    if (term) {
+      list = list.filter(c =>
+        (c.full_name || "").toLowerCase().includes(term) ||
+        (c.email || "").toLowerCase().includes(term) ||
+        (c.phone || "").toLowerCase().includes(term)
+      );
+    }
+
+    const container = document.getElementById("customersList");
+    if (list.length === 0) {
+      container.innerHTML = `<div class="empty-mini">No customers match.</div>`;
+      return;
+    }
+
+    const rows = list.map(c => {
+      const custOrders = ordersByCustomer[c.id] || [];
+      const spent = custOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+      const joined = c.created_at ? new Date(c.created_at).toLocaleDateString() : "—";
+      return `
+        <div class="cust-row" data-id="${c.id}">
+          <div>
+            <div class="cust-name">${c.full_name || "Unnamed customer"}</div>
+            <div class="cust-contact">${c.email || ""}${c.phone ? " · " + c.phone : ""}</div>
+          </div>
+          <div class="cust-joined">Joined ${joined}</div>
+          <div class="cust-orders">${custOrders.length} order${custOrders.length === 1 ? "" : "s"}</div>
+          <div class="cust-spent">${money(spent)}</div>
+        </div>`;
+    }).join("");
+
+    container.innerHTML = `
+      <div class="customer-table">
+        <div class="cust-row head"><div>Customer</div><div>Joined</div><div>Orders</div><div>Spent</div></div>
+        ${rows}
+      </div>`;
+
+    container.querySelectorAll(".cust-row[data-id]").forEach((row) => {
+      row.addEventListener("click", () => openDrawer(row.getAttribute("data-id")));
+    });
+  }
+
+  function openDrawer(customerId) {
+    const cust = customers.find(c => c.id === customerId);
+    const custOrders = ordersByCustomer[customerId] || [];
+    const spent = custOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+    document.getElementById("drawerName").textContent = cust.full_name || "Unnamed customer";
+    document.getElementById("drawerContact").textContent = `${cust.email || ""}${cust.phone ? " · " + cust.phone : ""}`;
+    document.getElementById("drawerOrders").textContent = custOrders.length;
+    document.getElementById("drawerSpent").textContent = money(spent);
+
+    const listEl = document.getElementById("drawerOrdersList");
+    if (custOrders.length === 0) {
+      listEl.innerHTML = `<p style="font-size:13px; color:#666a80;">No orders yet.</p>`;
+    } else {
+      listEl.innerHTML = custOrders.slice(0, 15).map(o => `
+        <div class="order-line">
+          <div>
+            <div class="num">${o.order_number}</div>
+            <div class="status">${o.status} · ${new Date(o.created_at).toLocaleDateString()}</div>
+          </div>
+          <div>${money(o.total, o.buyer_currency)}</div>
+        </div>`).join("");
+    }
+
+    document.getElementById("drawerOverlay").classList.add("show");
+  }
+
+  document.getElementById("drawerOverlay").addEventListener("click", () => {
+    document.getElementById("drawerOverlay").classList.remove("show");
+  });
+  document.getElementById("drawerClose").addEventListener("click", () => {
+    document.getElementById("drawerOverlay").classList.remove("show");
+  });
+
+  document.getElementById("searchInput").addEventListener("input", render);
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await window.JWingsDB.signOut(session.access_token);
+    window.JWingsDB.clearSession();
+    window.location.href = "/customer/login.html";
+  });
+
+  init();
+</script>
+</body>
+</html>
