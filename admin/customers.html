@@ -64,6 +64,9 @@
   .cust-joined { font-size: 12.5px; color: var(--muted); }
   .cust-orders { font-size: 13.5px; font-weight: 600; }
   .cust-spent { font-size: 13.5px; font-weight: 700; color: var(--navy-900); }
+  .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 4px; }
+  .status-pill.active { background: #e9f9f1; color: var(--success); }
+  .status-pill.suspended { background: #fdecea; color: var(--danger); }
 
   .empty-mini { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 14px; }
 
@@ -130,6 +133,10 @@
     <button class="drawer-close" id="drawerClose">✕</button>
     <h2 id="drawerName">—</h2>
     <p class="sub" id="drawerContact">—</p>
+    <div style="margin-bottom:18px;">
+      <span class="status-pill" id="drawerStatusPill"></span>
+      <button id="drawerStatusBtn" style="margin-left:10px; padding:6px 14px; border-radius:8px; border:1px solid var(--line); background:var(--white); font-size:12.5px; font-weight:700; cursor:pointer; font-family:var(--font-body);"></button>
+    </div>
     <div class="drawer-stat-grid">
       <div class="drawer-stat"><div class="label">Total orders</div><div class="value" id="drawerOrders">0</div></div>
       <div class="drawer-stat"><div class="label">Total spent</div><div class="value" id="drawerSpent">₦0</div></div>
@@ -218,6 +225,7 @@
           <div>
             <div class="cust-name">${c.full_name || "Unnamed customer"}</div>
             <div class="cust-contact">${c.email || ""}${c.phone ? " · " + c.phone : ""}</div>
+            <span class="status-pill ${c.status}">${c.status === "suspended" ? "Suspended" : "Active"}</span>
           </div>
           <div class="cust-joined">Joined ${joined}</div>
           <div class="cust-orders">${custOrders.length} order${custOrders.length === 1 ? "" : "s"}</div>
@@ -246,6 +254,24 @@
     document.getElementById("drawerOrders").textContent = custOrders.length;
     document.getElementById("drawerSpent").textContent = money(spent);
 
+    const pill = document.getElementById("drawerStatusPill");
+    const btn = document.getElementById("drawerStatusBtn");
+    pill.className = `status-pill ${cust.status}`;
+    pill.textContent = cust.status === "suspended" ? "Suspended" : "Active";
+    if (cust.status === "suspended") {
+      btn.textContent = "Reactivate";
+      btn.style.color = "#1e9e6a";
+      btn.onclick = () => setCustomerStatus(cust.id, "active");
+    } else {
+      btn.textContent = "Suspend";
+      btn.style.color = "#d64545";
+      btn.onclick = () => {
+        if (confirm("Suspend this customer? They'll keep access to their account and order history, but won't be able to place new orders.")) {
+          setCustomerStatus(cust.id, "suspended");
+        }
+      };
+    }
+
     const listEl = document.getElementById("drawerOrdersList");
     if (custOrders.length === 0) {
       listEl.innerHTML = `<p style="font-size:13px; color:#666a80;">No orders yet.</p>`;
@@ -261,6 +287,18 @@
     }
 
     document.getElementById("drawerOverlay").classList.add("show");
+  }
+
+  async function setCustomerStatus(customerId, newStatus) {
+    try {
+      await window.JWingsDB.update("profiles", `id=eq.${customerId}`, { status: newStatus }, session.access_token);
+      const cust = customers.find(c => c.id === customerId);
+      if (cust) cust.status = newStatus;
+      render();
+      openDrawer(customerId);
+    } catch (err) {
+      alert("Couldn't update this customer's status.");
+    }
   }
 
   document.getElementById("drawerOverlay").addEventListener("click", () => {

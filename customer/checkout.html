@@ -174,6 +174,16 @@
 
   async function initCheckout() {
     try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      if (profile && profile.status === "suspended") {
+        const banner = document.getElementById("errorBanner");
+        banner.textContent = "Your account has been suspended and can't place new orders right now. Contact JWings support if you think this is a mistake.";
+        banner.classList.add("show");
+        document.getElementById("placeOrderBtn").disabled = true;
+        document.getElementById("placeOrderBtn").textContent = "Account suspended";
+        return;
+      }
+
       const rows = await window.JWingsDB.select(
         "cart_items",
         `select=*,products(id,name,price,currency,stock,vendor_id,vendors(store_name,city,state))&customer_id=eq.${session.user.id}`,
