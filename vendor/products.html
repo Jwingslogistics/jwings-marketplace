@@ -109,6 +109,16 @@
   }
   .status-banner.pending { background: #fff4e5; color: #8a5a00; border: 1px solid #ffdba3; }
   .status-banner.suspended { background: #fdecea; color: #a5322a; border: 1px solid #f5c6c2; }
+
+  .row-actions { display: flex; gap: 6px; }
+  .row-actions button {
+    padding: 6px 12px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: var(--font-body); border: none;
+  }
+  .edit-row-btn { background: none; border: 1px solid var(--line) !important; color: var(--ink); }
+  .edit-row-btn:hover { background: var(--bg); }
+  .delete-row-btn { background: none; border: 1px solid #f5c6c2 !important; color: #d64545; }
+  .delete-row-btn:hover { background: #fdecea; }
+  .row-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -142,7 +152,7 @@
     <div class="panel">
       <table class="product-table" id="productTable" style="display:none;">
         <thead>
-          <tr><th></th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th></tr>
+          <tr><th></th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
         </thead>
         <tbody id="productTableBody"></tbody>
       </table>
@@ -156,7 +166,7 @@
 
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
-    <h3>Add a product</h3>
+    <h3 id="modalTitle">Add a product</h3>
     <div class="error-banner" id="formError"></div>
     <form id="productForm">
       <div class="field">
@@ -206,6 +216,9 @@
 
   let vendor = null;
   let selectedFile = null;
+  let editingProductId = null; // null = add mode, otherwise = editing this product's id
+  let productsById = {};
+  let existingImages = [];
 
   function money(amount, currency) {
     const symbol = currency === "NGN" ? "₦" : (currency || "");
@@ -287,8 +300,11 @@
 
     empty.style.display = "none";
     table.style.display = "table";
+    productsById = {};
     tbody.innerHTML = products.map(p => {
+      productsById[p.id] = p;
       const thumb = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.name}" />` : "📦";
+      const disabled = (vendor.status !== "active") ? "disabled" : "";
       return `
       <tr>
         <td><div class="thumb-cell">${thumb}</div></td>
@@ -297,19 +313,79 @@
         <td>${money(p.price, p.currency)}</td>
         <td>${p.stock}</td>
         <td><span class="status-pill ${statusClass(p.status)}">${p.status.replace("_", " ")}</span></td>
+        <td>
+          <div class="row-actions">
+            <button type="button" class="edit-row-btn" data-id="${p.id}" ${disabled}>Edit</button>
+            <button type="button" class="delete-row-btn" data-id="${p.id}" ${disabled}>Delete</button>
+          </div>
+        </td>
       </tr>`;
     }).join("");
+
+    tbody.querySelectorAll(".edit-row-btn").forEach((btn) => {
+      btn.addEventListener("click", () => openEditModal(productsById[btn.getAttribute("data-id")]));
+    });
+    tbody.querySelectorAll(".delete-row-btn").forEach((btn) => {
+      btn.addEventListener("click", () => deleteProduct(btn.getAttribute("data-id")));
+    });
   }
 
   const backdrop = document.getElementById("modalBackdrop");
-  document.getElementById("openModalBtn").addEventListener("click", () => backdrop.classList.add("show"));
+  document.getElementById("openModalBtn").addEventListener("click", () => {
+    editingProductId = null;
+    existingImages = [];
+    document.getElementById("modalTitle").textContent = "Add a product";
+    document.getElementById("saveBtn").textContent = "Save product";
+    backdrop.classList.add("show");
+  });
   document.getElementById("cancelBtn").addEventListener("click", () => closeModal());
   backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+
+  function openEditModal(product) {
+    if (!product) return;
+    editingProductId = product.id;
+    existingImages = product.images || [];
+    selectedFile = null;
+
+    document.getElementById("modalTitle").textContent = "Edit product";
+    document.getElementById("saveBtn").textContent = "Save changes";
+    document.getElementById("pName").value = product.name || "";
+    document.getElementById("pDescription").value = product.description || "";
+    document.getElementById("pPrice").value = product.price;
+    document.getElementById("pStock").value = product.stock;
+    document.getElementById("pCategory").value = product.category_id || "";
+
+    if (existingImages[0]) {
+      document.getElementById("pickerContent").innerHTML = `
+        <div class="image-preview-wrap">
+          <div class="image-preview"><img src="${existingImages[0]}" alt="Current photo" /></div>
+          <div class="image-picker-text">Current photo<br/><span class="fname">Tap to replace</span></div>
+        </div>`;
+    } else {
+      resetImagePicker();
+    }
+
+    backdrop.classList.add("show");
+  }
+
+  async function deleteProduct(productId) {
+    const product = productsById[productId];
+    if (!confirm(`Delete "${product ? product.name : "this product"}"? This can't be undone.`)) return;
+
+    try {
+      await window.JWingsDB.remove("products", `id=eq.${productId}`, session.access_token);
+      await loadProducts();
+    } catch (err) {
+      alert("Couldn't delete this product. Please try again.");
+    }
+  }
 
   function closeModal() {
     backdrop.classList.remove("show");
     document.getElementById("productForm").reset();
     selectedFile = null;
+    editingProductId = null;
+    existingImages = [];
     resetImagePicker();
   }
 
@@ -358,7 +434,7 @@
     saveBtn.textContent = "Saving...";
 
     try {
-      let imageUrls = [];
+      let imageUrls = existingImages; // keep current photo(s) unless a new one is chosen
 
       if (selectedFile) {
         uploadProgress.style.display = "block";
@@ -369,17 +445,25 @@
         uploadProgress.style.display = "none";
       }
 
-      await window.JWingsDB.insert("products", {
-        vendor_id: vendor.id,
+      const payload = {
         category_id: categoryId || null,
         name,
         description: description || null,
         price,
-        currency: vendor.currency,
         stock,
         images: imageUrls,
         status: stock > 0 ? "active" : "out_of_stock",
-      }, session.access_token);
+      };
+
+      if (editingProductId) {
+        await window.JWingsDB.update("products", `id=eq.${editingProductId}`, payload, session.access_token);
+      } else {
+        await window.JWingsDB.insert("products", {
+          ...payload,
+          vendor_id: vendor.id,
+          currency: vendor.currency,
+        }, session.access_token);
+      }
 
       closeModal();
       await loadProducts();
@@ -389,7 +473,7 @@
       formError.classList.add("show");
     } finally {
       saveBtn.disabled = false;
-      saveBtn.textContent = "Save product";
+      saveBtn.textContent = editingProductId ? "Save changes" : "Save product";
     }
   });
 
