@@ -288,8 +288,27 @@ function clearSession() {
   localStorage.removeItem("jwings_session");
 }
 
+// Decodes a JWT's payload without verifying it (verification happens
+// server-side) — used only to pull the user's own id for profile lookups.
+function decodeJwtPayload(token) {
+  try {
+    const payload = token.split(".")[1];
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json);
+  } catch (err) {
+    return null;
+  }
+}
+
 async function getMyProfile(accessToken) {
-  const rows = await dbSelect("profiles", "select=*&limit=1", accessToken);
+  const claims = accessToken ? decodeJwtPayload(accessToken) : null;
+  // Filter explicitly by the token's own user id. Relying on "select=*&limit=1"
+  // with no filter is unsafe for admins: since admins can read every profile
+  // (via the admin-select policy), an unfiltered query can return an
+  // arbitrary row instead of their own — which was causing admins to get
+  // redirected to the wrong dashboard after login.
+  const query = claims && claims.sub ? `select=*&id=eq.${claims.sub}&limit=1` : "select=*&limit=1";
+  const rows = await dbSelect("profiles", query, accessToken);
   return rows[0] || null;
 }
 
