@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>My Dashboard — JWings Logistics</title>
+<title>Admin Dashboard — JWings Logistics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -18,135 +18,125 @@
   body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
   a { text-decoration: none; color: inherit; }
 
-  .nav {
-    position: sticky; top: 0; z-index: 50;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 6vw; background: rgba(247,248,252,0.92);
-    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
-  }
-  .nav-logo { display: flex; align-items: center; gap: 10px; }
-  .nav-logo img { width: 30px; height: 30px; }
-  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
-  .nav-links { display: flex; align-items: center; gap: 20px; }
-  .nav-links a { font-size: 14px; font-weight: 500; }
-  .nav-cta { padding: 9px 18px; background: var(--navy-700); color: var(--white); border-radius: 8px; font-size: 13.5px; font-weight: 600; }
-  .logout-btn { background: none; border: none; color: var(--muted); font-size: 14px; cursor: pointer; font-family: var(--font-body); }
-  .logout-btn:hover { color: var(--danger); }
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
 
-  .page-head { padding: 32px 6vw 8px; }
-  .page-head .eyebrow { color: var(--orange-500); font-size: 12.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; margin-bottom: 8px; }
-  .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .side-foot { margin-top: auto; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer; font-family: var(--font-body); padding: 10px 12px; }
+  .logout-btn:hover { color: var(--white); }
 
-  .quick-actions { display: flex; gap: 12px; padding: 20px 6vw 8px; flex-wrap: wrap; }
-  .quick-action {
-    flex: 1; min-width: 160px; background: var(--white); border: 1px solid var(--line); border-radius: 14px;
-    padding: 18px; display: flex; align-items: center; gap: 12px; transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .quick-action:hover { transform: translateY(-2px); box-shadow: 0 14px 28px -18px rgba(26,35,126,0.25); }
-  .quick-action .icon { font-size: 22px; }
-  .quick-action .label { font-size: 13.5px; font-weight: 700; color: var(--navy-900); }
+  .main { padding: 32px 4vw 64px; }
+  .top-row { margin-bottom: 24px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
 
-  .content { padding: 20px 6vw 72px; }
-  .section-block { margin-bottom: 32px; }
-  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-  .section-head h2 { font-family: var(--font-display); font-size: 19px; color: var(--navy-900); }
-  .section-head a { font-size: 13px; font-weight: 600; color: var(--orange-500); }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px; }
+  @media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+  .stat-card .value { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); font-weight: 600; }
+  .stat-card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-  .list-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-  .row-item {
-    display: flex; align-items: center; justify-content: space-between; gap: 14px;
-    padding: 16px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap;
-  }
-  .row-item:last-child { border-bottom: none; }
-  .row-item:hover { background: var(--bg); }
-  .row-main { flex: 1; min-width: 180px; }
-  .row-title { font-size: 14.5px; font-weight: 600; margin-bottom: 3px; }
-  .row-sub { font-size: 12.5px; color: var(--muted); }
-  .row-amount { font-family: var(--font-display); font-size: 15px; color: var(--navy-900); font-weight: 600; }
+  .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
 
-  .status-pill { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+  .panel h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); margin-bottom: 16px; }
+
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .data-table td { padding: 10px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .data-table tr:last-child td { border-bottom: none; }
+
+  .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; }
   .status-new, .status-order_received { background: #e8ecfb; color: var(--navy-700); }
   .status-accepted, .status-rider_assigned, .status-preparing, .status-picked_up { background: #fff4e5; color: var(--orange-500); }
   .status-out_for_delivery, .status-in_transit, .status-arriving_soon { background: #e6f0ff; color: #2563eb; }
   .status-completed, .status-delivered { background: #e9f9f1; color: var(--success); }
   .status-cancelled { background: #fdecea; color: var(--danger); }
 
-  .empty-mini { text-align: center; padding: 36px 20px; }
-  .empty-mini .icon { font-size: 28px; margin-bottom: 10px; }
-  .empty-mini p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
-  .empty-mini a { display: inline-block; background: var(--navy-700); color: var(--white); padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; }
-  .empty-mini a:hover { background: var(--navy-900); }
+  .rider-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .rider-row:last-child { border-bottom: none; }
+  .rider-row .name { font-weight: 600; }
+  .rider-row .code { color: var(--muted); font-size: 12px; }
+  .online-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .online-dot.on { background: var(--success); }
+  .online-dot.off { background: var(--line); }
+
+  .empty-mini { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 13.5px; }
 </style>
 </head>
 <body>
 
-<nav class="nav">
-  <a class="nav-logo" href="/">
-    <img src="/assets/images/jwings-logo.png" alt="JWings" />
-    <span>JWings Logistics</span>
-  </a>
-  <div class="nav-links">
-    <a href="/customer/marketplace.html">Marketplace</a>
-    <a href="/customer/book-delivery.html">Book a delivery</a>
-    <a href="/customer/track.html">Track order</a>
-    <a href="/customer/notifications.html" style="position:relative;">🔔<span id="notifBadge" style="display:none; position:absolute; top:-8px; right:-10px; background:#f57c00; color:white; font-size:10.5px; font-weight:700; border-radius:10px; padding:1px 6px; min-width:16px; text-align:center;">0</span></a>
-    <a href="/customer/profile.html">My Profile</a>
-    <button class="logout-btn" id="logoutBtn">Log out</button>
-  </div>
-</nav>
-
-<div class="page-head">
-  <div class="eyebrow" id="greeting">Welcome back</div>
-  <h1 id="nameHeading">My Dashboard</h1>
-</div>
-
-<div class="quick-actions">
-  <a class="quick-action" href="/customer/marketplace.html">
-    <span class="icon">🛍️</span><span class="label">Shop marketplace</span>
-  </a>
-  <a class="quick-action" href="/customer/book-delivery.html">
-    <span class="icon">📦</span><span class="label">Book a delivery</span>
-  </a>
-  <a class="quick-action" href="/customer/track.html">
-    <span class="icon">🔍</span><span class="label">Track an order</span>
-  </a>
-</div>
-
-<div class="content">
-  <div class="section-block">
-    <div class="section-head">
-      <h2>My Orders</h2>
-      <a href="/customer/marketplace.html">Shop more →</a>
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Admin</span>
     </div>
-    <div class="list-card" id="ordersCard">
-      <div class="empty-mini"><p style="color:#666a80;">Loading...</p></div>
+    <nav>
+      <a class="active" href="/admin/dashboard.html">Overview</a>
+      <a href="/admin/vendors.html">Vendors</a>
+      <a href="/admin/riders.html">Riders</a>
+      <a href="/admin/customers.html">Customers</a>
+    </nav>
+    <div class="side-foot">
+      <button class="logout-btn" id="logoutBtn">Log out</button>
     </div>
-  </div>
+  </aside>
 
-  <div class="section-block">
-    <div class="section-head">
-      <h2>My Deliveries</h2>
-      <a href="/customer/book-delivery.html">Book another →</a>
+  <main class="main">
+    <div class="top-row">
+      <h1>Platform Overview</h1>
+      <p>A real-time snapshot of everything happening on JWings.</p>
     </div>
-    <div class="list-card" id="shipmentsCard">
-      <div class="empty-mini"><p style="color:#666a80;">Loading...</p></div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total orders</div><div class="value" id="statOrders">—</div></div>
+      <div class="stat-card"><div class="label">Total deliveries</div><div class="value" id="statShipments">—</div></div>
+      <div class="stat-card"><div class="label">Vendors</div><div class="value" id="statVendors">—</div></div>
+      <div class="stat-card"><div class="label">Riders</div><div class="value" id="statRiders">—<span class="sub" id="ridersOnlineSub"></span></div></div>
     </div>
-  </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <h3>Recent orders</h3>
+        <table class="data-table" id="ordersTable" style="display:none;">
+          <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
+          <tbody id="ordersTableBody"></tbody>
+        </table>
+        <div class="empty-mini" id="ordersEmpty">Loading...</div>
+      </div>
+
+      <div class="panel">
+        <h3>Riders</h3>
+        <div id="ridersList"><div class="empty-mini">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Recent deliveries</h3>
+      <table class="data-table" id="shipmentsTable" style="display:none;">
+        <thead><tr><th>Tracking ID</th><th>Route</th><th>Status</th><th>Fee</th></tr></thead>
+        <tbody id="shipmentsTableBody"></tbody>
+      </table>
+      <div class="empty-mini" id="shipmentsEmpty">Loading...</div>
+    </div>
+  </main>
 </div>
 
 <script src="/shared/supabase-client.js"></script>
 <script>
   const session = window.JWingsDB.getSession();
-  if (!session) window.location.href = "/customer/login.html?redirect=/customer/dashboard.html";
+  if (!session) window.location.href = "/customer/login.html?redirect=/admin/dashboard.html";
 
-  function money(amount, currency) {
-    const symbol = currency === "NGN" ? "₦" : (currency || "");
-    return `${symbol}${Number(amount || 0).toLocaleString()}`;
-  }
-  function formatDate(iso) {
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  }
   const ORDER_LABELS = {
     new: "New", accepted: "Accepted", preparing: "Preparing", out_for_delivery: "Out for delivery",
     completed: "Completed", cancelled: "Cancelled", pending: "Pending",
@@ -156,97 +146,122 @@
     in_transit: "In transit", arriving_soon: "Arriving soon", delivered: "Delivered", cancelled: "Cancelled",
   };
 
-  async function loadDashboard() {
-    let profile;
-    try {
-      profile = await window.JWingsDB.getMyProfile(session.access_token);
-    } catch (err) {
-      window.location.href = "/customer/login.html";
+  function money(amount, currency) {
+    const symbol = currency === "NGN" ? "₦" : (currency || "");
+    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  }
+
+  async function init() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "admin") {
+      window.location.href = "/customer/dashboard.html";
       return;
     }
 
-    if (profile) {
-      document.getElementById("greeting").textContent = `Welcome back, ${profile.full_name || "there"}`;
-      document.getElementById("nameHeading").textContent = "My Dashboard";
-    }
-
-    await Promise.all([loadOrders(profile), loadShipments(profile), loadNotifBadge()]);
+    await Promise.all([loadStats(), loadOrders(), loadShipments(), loadRiders()]);
   }
 
-  async function loadNotifBadge() {
+  async function loadStats() {
     try {
-      const unread = await window.JWingsDB.select(
-        "notifications", "select=id&is_read=eq.false", session.access_token
-      );
-      const badge = document.getElementById("notifBadge");
-      if (unread.length > 0) {
-        badge.style.display = "inline-block";
-        badge.textContent = unread.length > 9 ? "9+" : unread.length;
-      }
+      const [orders, shipments, vendors, riders] = await Promise.all([
+        window.JWingsDB.select("orders", "select=id", session.access_token),
+        window.JWingsDB.select("shipments", "select=id", session.access_token),
+        window.JWingsDB.select("vendors", "select=id", session.access_token),
+        window.JWingsDB.select("riders", "select=id,is_online", session.access_token),
+      ]);
+
+      document.getElementById("statOrders").textContent = orders.length;
+      document.getElementById("statShipments").textContent = shipments.length;
+      document.getElementById("statVendors").textContent = vendors.length;
+      document.getElementById("statRiders").childNodes[0].textContent = riders.length;
+
+      const onlineCount = riders.filter(r => r.is_online).length;
+      document.getElementById("ridersOnlineSub").textContent = ` (${onlineCount} online)`;
     } catch (err) {
-      // Non-critical
+      // leave dashes if this fails
     }
   }
 
-  async function loadOrders(profile) {
-    const card = document.getElementById("ordersCard");
+  async function loadOrders() {
+    const table = document.getElementById("ordersTable");
+    const tbody = document.getElementById("ordersTableBody");
+    const empty = document.getElementById("ordersEmpty");
+
     try {
       const orders = await window.JWingsDB.select(
-        "orders", `select=*&customer_id=eq.${profile.id}&order=created_at.desc&limit=10`, session.access_token
+        "orders", "select=*,profiles(full_name)&order=created_at.desc&limit=8", session.access_token
       );
 
       if (orders.length === 0) {
-        card.innerHTML = `
-          <div class="empty-mini">
-            <div class="icon">🛍️</div>
-            <p>You haven't placed any marketplace orders yet.</p>
-            <a href="/customer/marketplace.html">Browse the marketplace</a>
-          </div>`;
+        empty.textContent = "No orders placed yet.";
         return;
       }
 
-      card.innerHTML = orders.map(o => `
-        <a class="row-item" href="/customer/order-detail.html?id=${o.id}">
-          <div class="row-main">
-            <div class="row-title">Order ${o.order_number}</div>
-            <div class="row-sub">${formatDate(o.created_at)} · ${o.delivery_type.replace("_", " ")}</div>
-          </div>
-          <span class="status-pill status-${o.status}">${ORDER_LABELS[o.status] || o.status}</span>
-          <div class="row-amount">${money(o.total, o.buyer_currency)}</div>
-        </a>`).join("");
+      empty.style.display = "none";
+      table.style.display = "table";
+      tbody.innerHTML = orders.map(o => `
+        <tr>
+          <td>${o.order_number}</td>
+          <td>${o.profiles ? o.profiles.full_name : "—"}</td>
+          <td>${money(o.total, o.buyer_currency)}</td>
+          <td><span class="status-pill status-${o.status}">${ORDER_LABELS[o.status] || o.status}</span></td>
+        </tr>`).join("");
     } catch (err) {
-      card.innerHTML = `<div class="empty-mini"><p>Couldn't load your orders right now.</p></div>`;
+      empty.textContent = "Couldn't load orders.";
     }
   }
 
-  async function loadShipments(profile) {
-    const card = document.getElementById("shipmentsCard");
+  async function loadShipments() {
+    const table = document.getElementById("shipmentsTable");
+    const tbody = document.getElementById("shipmentsTableBody");
+    const empty = document.getElementById("shipmentsEmpty");
+
     try {
       const shipments = await window.JWingsDB.select(
-        "shipments", `select=*&sender_id=eq.${profile.id}&order=created_at.desc&limit=10`, session.access_token
+        "shipments", "select=*&order=created_at.desc&limit=8", session.access_token
       );
 
       if (shipments.length === 0) {
-        card.innerHTML = `
-          <div class="empty-mini">
-            <div class="icon">📦</div>
-            <p>You haven't booked any deliveries yet.</p>
-            <a href="/customer/book-delivery.html">Book a delivery</a>
-          </div>`;
+        empty.textContent = "No deliveries booked yet.";
         return;
       }
 
-      card.innerHTML = shipments.map(s => `
-        <a class="row-item" href="/customer/track.html?code=${s.tracking_id}">
-          <div class="row-main">
-            <div class="row-title">${s.tracking_id}</div>
-            <div class="row-sub">${formatDate(s.created_at)} · to ${s.dropoff_address.slice(0, 30)}${s.dropoff_address.length > 30 ? "..." : ""}</div>
-          </div>
-          <span class="status-pill status-${s.status}">${SHIPMENT_LABELS[s.status] || s.status}</span>
-          <div class="row-amount">${money(s.delivery_fee, s.currency)}</div>
-        </a>`).join("");
+      empty.style.display = "none";
+      table.style.display = "table";
+      tbody.innerHTML = shipments.map(s => `
+        <tr>
+          <td>${s.tracking_id}</td>
+          <td>${s.pickup_address.slice(0, 20)}... → ${s.dropoff_address.slice(0, 20)}...</td>
+          <td><span class="status-pill status-${s.status}">${SHIPMENT_LABELS[s.status] || s.status}</span></td>
+          <td>${money(s.delivery_fee, s.currency)}</td>
+        </tr>`).join("");
     } catch (err) {
-      card.innerHTML = `<div class="empty-mini"><p>Couldn't load your deliveries right now.</p></div>`;
+      empty.textContent = "Couldn't load deliveries.";
+    }
+  }
+
+  async function loadRiders() {
+    const container = document.getElementById("ridersList");
+    try {
+      const riders = await window.JWingsDB.select(
+        "riders", "select=*,profiles(full_name)&order=is_online.desc&limit=10", session.access_token
+      );
+
+      if (riders.length === 0) {
+        container.innerHTML = `<div class="empty-mini">No riders registered yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = riders.map(r => `
+        <div class="rider-row">
+          <div>
+            <span class="online-dot ${r.is_online ? "on" : "off"}"></span>
+            <span class="name">${r.profiles ? r.profiles.full_name : r.rider_code}</span>
+          </div>
+          <span class="code">${r.rider_code}</span>
+        </div>`).join("");
+    } catch (err) {
+      container.innerHTML = `<div class="empty-mini">Couldn't load riders.</div>`;
     }
   }
 
@@ -256,7 +271,7 @@
     window.location.href = "/customer/login.html";
   });
 
-  loadDashboard();
+  init();
 </script>
 </body>
 </html>

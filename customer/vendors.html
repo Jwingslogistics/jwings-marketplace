@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vendor Management — JWings Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .side-foot { margin-top: auto; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer; font-family: var(--font-body); padding: 10px 12px; }
+  .logout-btn:hover { color: var(--white); }
+
+  .main { padding: 32px 4vw 64px; }
+  .top-row { margin-bottom: 24px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-tab {
+    padding: 7px 15px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    background: var(--white); border: 1px solid var(--line); color: var(--muted); cursor: pointer; font-family: var(--font-body);
+  }
+  .filter-tab.active { background: var(--navy-700); color: var(--white); border-color: var(--navy-700); }
+
+  .vendor-card {
+    background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 20px;
+    margin-bottom: 14px; display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .vendor-avatar {
+    width: 56px; height: 56px; border-radius: 12px; background: var(--bg); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: var(--navy-700);
+  }
+  .vendor-info { flex: 1; min-width: 220px; }
+  .vendor-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
+  .vendor-name { font-size: 15px; font-weight: 700; }
+  .verified-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--success); }
+  .vendor-meta { font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+  .vendor-stats { display: flex; gap: 16px; margin-bottom: 10px; flex-wrap: wrap; }
+  .vendor-stats span { font-size: 12px; color: var(--muted); }
+  .vendor-stats strong { color: var(--ink); font-weight: 600; }
+  .status-pill { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
+  .status-pending { background: #fff4e5; color: var(--orange-500); }
+  .status-active { background: #e9f9f1; color: var(--success); }
+  .status-suspended { background: #fdecea; color: var(--danger); }
+  .vendor-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .vendor-actions button {
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font-body); border: none;
+  }
+  .approve-btn { background: var(--success); color: var(--white); }
+  .approve-btn:hover { background: #167f56; }
+  .verify-btn { background: none; border: 1px solid var(--navy-700) !important; color: var(--navy-700); }
+  .verify-btn:hover { background: #f5f6ff; }
+  .suspend-btn { background: none; border: 1px solid #f5c6c2 !important; color: var(--danger); }
+  .suspend-btn:hover { background: #fdecea; }
+  .reactivate-btn { background: none; border: 1px solid var(--line) !important; color: var(--ink); }
+
+  .empty-mini { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 14px; }
+  .action-error { font-size: 12px; color: var(--danger); margin-top: 8px; display: none; width: 100%; }
+  .action-error.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Admin</span>
+    </div>
+    <nav>
+      <a href="/admin/dashboard.html">Overview</a>
+      <a class="active" href="/admin/vendors.html">Vendors</a>
+      <a href="/admin/riders.html">Riders</a>
+      <a href="/admin/customers.html">Customers</a>
+    </nav>
+    <div class="side-foot">
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <h1>Vendor Management</h1>
+      <p>Review, verify, and manage vendor accounts on JWings.</p>
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-filter="all">All</button>
+      <button class="filter-tab" data-filter="pending">Pending</button>
+      <button class="filter-tab" data-filter="active">Active</button>
+      <button class="filter-tab" data-filter="suspended">Suspended</button>
+    </div>
+
+    <div id="vendorsList"><div class="empty-mini">Loading...</div></div>
+  </main>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/admin/vendors.html";
+
+  let allVendors = [];
+  let activeFilter = "all";
+
+  function money(amount, currency) {
+    const symbol = currency === "NGN" ? "₦" : (currency || "");
+    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  }
+
+  async function init() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "admin") {
+      window.location.href = "/customer/dashboard.html";
+      return;
+    }
+
+    await loadVendors();
+  }
+
+  async function loadVendors() {
+    const container = document.getElementById("vendorsList");
+    try {
+      allVendors = await window.JWingsDB.select(
+        "vendors",
+        "select=*,profiles(full_name,email,phone)&order=status.asc,created_at.desc",
+        session.access_token
+      );
+      render();
+    } catch (err) {
+      container.innerHTML = `<div class="empty-mini">Couldn't load vendors right now: ${err.message}</div>`;
+    }
+  }
+
+  function render() {
+    const container = document.getElementById("vendorsList");
+    let list = allVendors;
+    if (activeFilter !== "all") list = list.filter(v => v.status === activeFilter);
+
+    if (list.length === 0) {
+      container.innerHTML = `<div class="empty-mini">No vendors in this category.</div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(v => {
+      const statusLabel = v.status === "active" ? "Active" : v.status === "suspended" ? "Suspended" : "Pending";
+      const initial = (v.store_name || "V").charAt(0).toUpperCase();
+      const contact = v.profiles ? (v.profiles.phone || v.profiles.email) : "";
+
+      return `
+        <div class="vendor-card" data-id="${v.id}">
+          <div class="vendor-avatar">${initial}</div>
+          <div class="vendor-info">
+            <div class="vendor-name-row">
+              <span class="vendor-name">${v.store_name}</span>
+              ${v.is_verified ? `<span class="verified-badge">✓ Verified</span>` : ""}
+            </div>
+            <div class="vendor-meta">${v.city || "—"}${v.state ? ", " + v.state : ""} · ${v.currency} · ${contact}</div>
+            <div class="vendor-stats">
+              <span>Wallet: <strong>${money(v.wallet_balance, v.currency)}</strong></span>
+              <span>Commission: <strong>${v.commission_rate}%</strong></span>
+              <span>Rating: <strong>${v.average_rating > 0 ? v.average_rating + "★ (" + v.total_reviews + ")" : "No reviews"}</strong></span>
+            </div>
+            <span class="status-pill status-${v.status}">${statusLabel}</span>
+            <div class="vendor-actions">
+              ${v.status === "pending" ? `<button class="approve-btn" data-action="activate" data-id="${v.id}">Activate</button>` : ""}
+              ${!v.is_verified ? `<button class="verify-btn" data-action="verify" data-id="${v.id}">Mark verified</button>` : ""}
+              ${v.status !== "suspended" ? `<button class="suspend-btn" data-action="suspend" data-id="${v.id}">Suspend</button>` : `<button class="reactivate-btn" data-action="reactivate" data-id="${v.id}">Reactivate</button>`}
+            </div>
+            <div class="action-error" id="err-${v.id}"></div>
+          </div>
+        </div>`;
+    }).join("");
+
+    attachHandlers();
+  }
+
+  function showActionError(vendorId, message) {
+    const el = document.getElementById(`err-${vendorId}`);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add("show");
+  }
+
+  function attachHandlers() {
+    document.querySelectorAll('[data-action="activate"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        try {
+          await window.JWingsDB.update("vendors", `id=eq.${id}`, { status: "active" }, session.access_token);
+          await loadVendors();
+        } catch (err) {
+          showActionError(id, err.message || "Couldn't activate this vendor.");
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="verify"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        try {
+          await window.JWingsDB.update("vendors", `id=eq.${id}`, { is_verified: true }, session.access_token);
+          await loadVendors();
+        } catch (err) {
+          showActionError(id, err.message || "Couldn't verify this vendor.");
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="suspend"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        if (!confirm("Suspend this vendor? Their products will remain listed but this flags the account for review.")) return;
+        try {
+          await window.JWingsDB.update("vendors", `id=eq.${id}`, { status: "suspended" }, session.access_token);
+          await loadVendors();
+        } catch (err) {
+          showActionError(id, err.message || "Couldn't suspend this vendor.");
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="reactivate"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        try {
+          await window.JWingsDB.update("vendors", `id=eq.${id}`, { status: "active" }, session.access_token);
+          await loadVendors();
+        } catch (err) {
+          showActionError(id, err.message || "Couldn't reactivate this vendor.");
+        }
+      });
+    });
+  }
+
+  document.querySelectorAll(".filter-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      activeFilter = tab.getAttribute("data-filter");
+      render();
+    });
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await window.JWingsDB.signOut(session.access_token);
+    window.JWingsDB.clearSession();
+    window.location.href = "/customer/login.html";
+  });
+
+  init();
+</script>
+</body>
+</html>

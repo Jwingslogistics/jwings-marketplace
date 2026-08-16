@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Customer Activity — JWings Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .side-foot { margin-top: auto; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer; font-family: var(--font-body); padding: 10px 12px; }
+  .logout-btn:hover { color: var(--white); }
+
+  .main { padding: 32px 4vw 64px; }
+  .top-row { margin-bottom: 24px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .search-box {
+    display: flex; align-items: center; gap: 8px; background: var(--white); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; max-width: 360px;
+  }
+  .search-box input { border: none; outline: none; flex: 1; font-size: 14px; font-family: var(--font-body); }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 8px 0; overflow-x: auto; }
+  .customer-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  .customer-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .customer-table td { padding: 14px 20px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .customer-table tr:last-child td { border-bottom: none; }
+  .customer-table tr:hover { background: var(--bg); }
+  .cust-name { font-weight: 600; }
+  .cust-email { color: var(--muted); font-size: 12.5px; }
+  .cust-joined { color: var(--muted); font-size: 12.5px; }
+  .count-pill { display: inline-block; background: var(--bg); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .status-pill { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
+  .status-pill.active { background: #e9f9f1; color: var(--success); }
+  .status-pill.suspended { background: #fdecea; color: var(--danger); }
+  .row-action-btn {
+    background: none; border: 1px solid var(--line); padding: 6px 12px; border-radius: 7px;
+    font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body);
+  }
+  .row-action-btn.suspend { color: var(--danger); border-color: #f5c6c2; }
+  .row-action-btn.suspend:hover { background: #fdecea; }
+  .row-action-btn.reactivate { color: var(--ink); }
+  .row-action-btn.reactivate:hover { background: var(--bg); }
+
+  .empty-mini { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 14px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 24px; }
+  @media (max-width: 700px) { .stat-grid { grid-template-columns: 1fr; } }
+  .stat-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .stat-card .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+  .stat-card .value { font-family: var(--font-display); font-size: 22px; color: var(--navy-900); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Admin</span>
+    </div>
+    <nav>
+      <a href="/admin/dashboard.html">Overview</a>
+      <a href="/admin/vendors.html">Vendors</a>
+      <a href="/admin/riders.html">Riders</a>
+      <a class="active" href="/admin/customers.html">Customers</a>
+    </nav>
+    <div class="side-foot">
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <h1>Customer Activity</h1>
+      <p>Everyone who's signed up as a customer, with their order and delivery activity.</p>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total customers</div><div class="value" id="statTotal">—</div></div>
+      <div class="stat-card"><div class="label">Placed an order</div><div class="value" id="statActive">—</div></div>
+      <div class="stat-card"><div class="label">New this week</div><div class="value" id="statNew">—</div></div>
+    </div>
+
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Search by name or email..." />
+    </div>
+
+    <div class="panel">
+      <table class="customer-table" id="customerTable" style="display:none;">
+        <thead>
+          <tr><th>Customer</th><th>Joined</th><th>Orders</th><th>Deliveries</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="customerTableBody"></tbody>
+      </table>
+      <div class="empty-mini" id="emptyState">Loading...</div>
+    </div>
+  </main>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/admin/customers.html";
+
+  let allCustomers = [];
+
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  async function init() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "admin") {
+      window.location.href = "/customer/dashboard.html";
+      return;
+    }
+
+    await loadCustomers();
+  }
+
+  async function loadCustomers() {
+    const table = document.getElementById("customerTable");
+    const tbody = document.getElementById("customerTableBody");
+    const empty = document.getElementById("emptyState");
+
+    try {
+      const [customers, orders, shipments] = await Promise.all([
+        window.JWingsDB.select("profiles", "select=id,full_name,email,created_at,status&role=eq.customer&order=created_at.desc", session.access_token),
+        window.JWingsDB.select("orders", "select=customer_id", session.access_token),
+        window.JWingsDB.select("shipments", "select=sender_id", session.access_token),
+      ]);
+
+      const orderCounts = {};
+      orders.forEach(o => { orderCounts[o.customer_id] = (orderCounts[o.customer_id] || 0) + 1; });
+
+      const shipmentCounts = {};
+      shipments.forEach(s => { shipmentCounts[s.sender_id] = (shipmentCounts[s.sender_id] || 0) + 1; });
+
+      allCustomers = customers.map(c => ({
+        ...c,
+        orderCount: orderCounts[c.id] || 0,
+        shipmentCount: shipmentCounts[c.id] || 0,
+      }));
+
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      document.getElementById("statTotal").textContent = allCustomers.length;
+      document.getElementById("statActive").textContent = allCustomers.filter(c => c.orderCount > 0).length;
+      document.getElementById("statNew").textContent = allCustomers.filter(c => new Date(c.created_at).getTime() > weekAgo).length;
+
+      render();
+    } catch (err) {
+      empty.textContent = `Couldn't load customers: ${err.message}`;
+    }
+  }
+
+  function render() {
+    const table = document.getElementById("customerTable");
+    const tbody = document.getElementById("customerTableBody");
+    const empty = document.getElementById("emptyState");
+    const search = document.getElementById("searchInput").value.trim().toLowerCase();
+
+    let list = allCustomers;
+    if (search) {
+      list = list.filter(c =>
+        (c.full_name || "").toLowerCase().includes(search) ||
+        (c.email || "").toLowerCase().includes(search)
+      );
+    }
+
+    if (list.length === 0) {
+      table.style.display = "none";
+      empty.style.display = "block";
+      empty.textContent = allCustomers.length === 0 ? "No customers have signed up yet." : "No customers match your search.";
+      return;
+    }
+
+    empty.style.display = "none";
+    table.style.display = "table";
+    tbody.innerHTML = list.map(c => {
+      const status = c.status || "active";
+      return `
+      <tr>
+        <td>
+          <div class="cust-name">${c.full_name || "—"}</div>
+          <div class="cust-email">${c.email}</div>
+        </td>
+        <td class="cust-joined">${formatDate(c.created_at)}</td>
+        <td><span class="count-pill">${c.orderCount}</span></td>
+        <td><span class="count-pill">${c.shipmentCount}</span></td>
+        <td><span class="status-pill ${status}">${status === "active" ? "Active" : "Suspended"}</span></td>
+        <td>
+          ${status === "active"
+            ? `<button class="row-action-btn suspend" data-action="suspend" data-id="${c.id}">Suspend</button>`
+            : `<button class="row-action-btn reactivate" data-action="reactivate" data-id="${c.id}">Reactivate</button>`}
+        </td>
+      </tr>`;
+    }).join("");
+
+    attachHandlers();
+  }
+
+  function attachHandlers() {
+    document.querySelectorAll('[data-action="suspend"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Suspend this customer's account?")) return;
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        try {
+          await window.JWingsDB.update("profiles", `id=eq.${id}`, { status: "suspended" }, session.access_token);
+          const c = allCustomers.find(x => x.id === id);
+          if (c) c.status = "suspended";
+          render();
+        } catch (err) {
+          alert(err.message || "Couldn't suspend this customer.");
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="reactivate"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        try {
+          await window.JWingsDB.update("profiles", `id=eq.${id}`, { status: "active" }, session.access_token);
+          const c = allCustomers.find(x => x.id === id);
+          if (c) c.status = "active";
+          render();
+        } catch (err) {
+          alert(err.message || "Couldn't reactivate this customer.");
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  document.getElementById("searchInput").addEventListener("input", render);
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await window.JWingsDB.signOut(session.access_token);
+    window.JWingsDB.clearSession();
+    window.location.href = "/customer/login.html";
+  });
+
+  init();
+</script>
+</body>
+</html>

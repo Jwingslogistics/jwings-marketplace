@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rider Verification — JWings Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .side-foot { margin-top: auto; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer; font-family: var(--font-body); padding: 10px 12px; }
+  .logout-btn:hover { color: var(--white); }
+
+  .main { padding: 32px 4vw 64px; }
+  .top-row { margin-bottom: 24px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .filter-tab {
+    padding: 7px 15px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    background: var(--white); border: 1px solid var(--line); color: var(--muted); cursor: pointer; font-family: var(--font-body);
+  }
+  .filter-tab.active { background: var(--navy-700); color: var(--white); border-color: var(--navy-700); }
+
+  .rider-card {
+    background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 20px;
+    margin-bottom: 14px; display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .doc-thumb {
+    width: 110px; height: 110px; border-radius: 10px; background: var(--bg); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 28px; overflow: hidden; cursor: pointer;
+  }
+  .doc-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .rider-info { flex: 1; min-width: 200px; }
+  .rider-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .rider-meta { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+  .status-pill { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
+  .status-pending { background: #fff4e5; color: var(--orange-500); }
+  .status-verified { background: #e9f9f1; color: var(--success); }
+  .status-suspended { background: #fdecea; color: var(--danger); }
+  .rider-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .rider-actions button {
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font-body); border: none;
+  }
+  .approve-btn { background: var(--success); color: var(--white); }
+  .approve-btn:hover { background: #167f56; }
+  .suspend-btn { background: none; border: 1px solid #f5c6c2 !important; color: var(--danger); }
+  .suspend-btn:hover { background: #fdecea; }
+  .reactivate-btn { background: none; border: 1px solid var(--line) !important; color: var(--ink); }
+
+  .empty-mini { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Admin</span>
+    </div>
+    <nav>
+      <a href="/admin/dashboard.html">Overview</a>
+      <a href="/admin/vendors.html">Vendors</a>
+      <a class="active" href="/admin/riders.html">Riders</a>
+      <a href="/admin/customers.html">Customers</a>
+    </nav>
+    <div class="side-foot">
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <h1>Rider Verification</h1>
+      <p>Review uploaded documents and activate riders for full delivery access.</p>
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-filter="all">All</button>
+      <button class="filter-tab" data-filter="pending">Pending review</button>
+      <button class="filter-tab" data-filter="verified">Verified</button>
+      <button class="filter-tab" data-filter="suspended">Suspended</button>
+    </div>
+
+    <div id="ridersList"><div class="empty-mini">Loading...</div></div>
+  </main>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/admin/riders.html";
+
+  let allRiders = [];
+  let activeFilter = "all";
+
+  async function init() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "admin") {
+      window.location.href = "/customer/dashboard.html";
+      return;
+    }
+
+    await loadRiders();
+  }
+
+  async function loadRiders() {
+    const container = document.getElementById("ridersList");
+    try {
+      allRiders = await window.JWingsDB.select(
+        "riders", "select=*,profiles(full_name,email,phone)&order=documents_verified.asc,created_at.desc", session.access_token
+      );
+      render();
+    } catch (err) {
+      container.innerHTML = `<div class="empty-mini">Couldn't load riders right now.</div>`;
+    }
+  }
+
+  function riderVerifyState(rider) {
+    if (rider.status === "suspended") return "suspended";
+    if (rider.documents_verified) return "verified";
+    return "pending";
+  }
+
+  function render() {
+    const container = document.getElementById("ridersList");
+    let list = allRiders;
+    if (activeFilter !== "all") list = list.filter(r => riderVerifyState(r) === activeFilter);
+
+    if (list.length === 0) {
+      container.innerHTML = `<div class="empty-mini">No riders in this category.</div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(r => {
+      const state = riderVerifyState(r);
+      const stateLabel = state === "verified" ? "Verified" : state === "suspended" ? "Suspended" : "Pending review";
+      return `
+        <div class="rider-card" data-id="${r.id}">
+          <div class="doc-thumb" data-doc-path="${r.document_url || ""}">
+            ${r.document_url ? "📄 View" : "No document"}
+          </div>
+          <div class="rider-info">
+            <div class="rider-name">${r.profiles ? r.profiles.full_name : r.rider_code}</div>
+            <div class="rider-meta">${r.rider_code} · ${r.profiles ? r.profiles.phone || r.profiles.email : ""}</div>
+            <span class="status-pill status-${state}">${stateLabel}</span>
+            <div class="rider-actions">
+              ${state === "pending" && r.document_url ? `<button class="approve-btn" data-action="approve" data-id="${r.id}">Approve</button>` : ""}
+              ${state !== "suspended" ? `<button class="suspend-btn" data-action="suspend" data-id="${r.id}">Suspend</button>` : `<button class="reactivate-btn" data-action="reactivate" data-id="${r.id}">Reactivate</button>`}
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+
+    attachHandlers();
+  }
+
+  function attachHandlers() {
+    document.querySelectorAll(".doc-thumb").forEach((el) => {
+      const path = el.getAttribute("data-doc-path");
+      if (!path) return;
+      el.addEventListener("click", async () => {
+        try {
+          const url = await window.JWingsDB.getSignedUrl("rider-documents", path, session.access_token);
+          window.open(url, "_blank");
+        } catch (err) {
+          alert("Couldn't open this document right now.");
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="approve"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          await window.JWingsDB.update("riders", `id=eq.${btn.getAttribute("data-id")}`, {
+            documents_verified: true, status: "active",
+          }, session.access_token);
+          await loadRiders();
+        } catch (err) {
+          alert("Couldn't approve this rider.");
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="suspend"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Suspend this rider? They won't be able to accept new jobs.")) return;
+        try {
+          await window.JWingsDB.update("riders", `id=eq.${btn.getAttribute("data-id")}`, { status: "suspended" }, session.access_token);
+          await loadRiders();
+        } catch (err) {
+          alert("Couldn't suspend this rider.");
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="reactivate"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        try {
+          await window.JWingsDB.update("riders", `id=eq.${btn.getAttribute("data-id")}`, { status: "active" }, session.access_token);
+          await loadRiders();
+        } catch (err) {
+          alert("Couldn't reactivate this rider.");
+        }
+      });
+    });
+  }
+
+  document.querySelectorAll(".filter-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      activeFilter = tab.getAttribute("data-filter");
+      render();
+    });
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await window.JWingsDB.signOut(session.access_token);
+    window.JWingsDB.clearSession();
+    window.location.href = "/customer/login.html";
+  });
+
+  init();
+</script>
+</body>
+</html>
