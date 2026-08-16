@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Customers — JWings Admin</title>
+<title>Customer Activity — JWings Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -33,62 +33,45 @@
   .logout-btn:hover { color: var(--white); }
 
   .main { padding: 32px 4vw 64px; }
-  .top-row { margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+  .top-row { margin-bottom: 24px; }
   .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
   .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
 
   .search-box {
     display: flex; align-items: center; gap: 8px; background: var(--white); border: 1px solid var(--line);
-    border-radius: 10px; padding: 9px 14px; max-width: 320px; width: 100%;
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; max-width: 360px;
   }
-  .search-box input { border: none; outline: none; flex: 1; font-size: 14px; font-family: var(--font-body); background: transparent; }
+  .search-box input { border: none; outline: none; flex: 1; font-size: 14px; font-family: var(--font-body); }
 
-  .stat-row { display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
-  .stat-chip { background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 14px 20px; min-width: 130px; }
-  .stat-chip .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
-  .stat-chip .value { font-family: var(--font-display); font-size: 20px; color: var(--navy-900); font-weight: 600; }
-
-  .customer-table { background: var(--white); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-  .cust-row {
-    display: grid; grid-template-columns: 1fr 140px 110px 110px; gap: 14px; align-items: center;
-    padding: 15px 20px; border-bottom: 1px solid var(--line); cursor: pointer;
-  }
-  .cust-row:hover { background: var(--bg); }
-  .cust-row:last-child { border-bottom: none; }
-  .cust-row.head { background: var(--bg); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); font-weight: 700; cursor: default; }
-  .cust-row.head:hover { background: var(--bg); }
-  @media (max-width: 760px) { .cust-row { grid-template-columns: 1fr; gap: 4px; } .cust-row.head { display: none; } }
-
-  .cust-name { font-size: 14px; font-weight: 700; }
-  .cust-contact { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-  .cust-joined { font-size: 12.5px; color: var(--muted); }
-  .cust-orders { font-size: 13.5px; font-weight: 600; }
-  .cust-spent { font-size: 13.5px; font-weight: 700; color: var(--navy-900); }
-  .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 4px; }
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 8px 0; overflow-x: auto; }
+  .customer-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  .customer-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .customer-table td { padding: 14px 20px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .customer-table tr:last-child td { border-bottom: none; }
+  .customer-table tr:hover { background: var(--bg); }
+  .cust-name { font-weight: 600; }
+  .cust-email { color: var(--muted); font-size: 12.5px; }
+  .cust-joined { color: var(--muted); font-size: 12.5px; }
+  .count-pill { display: inline-block; background: var(--bg); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .status-pill { display: inline-block; padding: 4px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
   .status-pill.active { background: #e9f9f1; color: var(--success); }
   .status-pill.suspended { background: #fdecea; color: var(--danger); }
+  .row-action-btn {
+    background: none; border: 1px solid var(--line); padding: 6px 12px; border-radius: 7px;
+    font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body);
+  }
+  .row-action-btn.suspend { color: var(--danger); border-color: #f5c6c2; }
+  .row-action-btn.suspend:hover { background: #fdecea; }
+  .row-action-btn.reactivate { color: var(--ink); }
+  .row-action-btn.reactivate:hover { background: var(--bg); }
 
   .empty-mini { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 14px; }
 
-  /* ---- Detail drawer ---- */
-  .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(15,26,92,0.35); z-index: 100; }
-  .drawer-overlay.show { display: block; }
-  .drawer {
-    position: fixed; top: 0; right: 0; width: 400px; max-width: 92vw; height: 100vh; background: var(--white);
-    z-index: 101; padding: 28px 24px; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,0.08);
-  }
-  .drawer-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); float: right; }
-  .drawer h2 { font-family: var(--font-display); font-size: 20px; color: var(--navy-900); margin-bottom: 4px; }
-  .drawer .sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-  .drawer-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
-  .drawer-stat { background: var(--bg); border-radius: 10px; padding: 12px 14px; }
-  .drawer-stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
-  .drawer-stat .value { font-size: 16px; font-weight: 700; color: var(--navy-900); margin-top: 3px; }
-  .drawer h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--navy-900); margin-bottom: 10px; }
-  .order-line { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
-  .order-line:last-child { border-bottom: none; }
-  .order-line .num { font-weight: 600; }
-  .order-line .status { color: var(--muted); font-size: 12px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 24px; }
+  @media (max-width: 700px) { .stat-grid { grid-template-columns: 1fr; } }
+  .stat-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .stat-card .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+  .stat-card .value { font-family: var(--font-display); font-size: 22px; color: var(--navy-900); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -112,38 +95,31 @@
 
   <main class="main">
     <div class="top-row">
-      <div>
-        <h1>Customers</h1>
-        <p>Browse customer accounts and their order activity.</p>
-      </div>
-      <div class="search-box">
-        <span>🔍</span>
-        <input type="text" id="searchInput" placeholder="Search name, email, phone..." />
-      </div>
+      <h1>Customer Activity</h1>
+      <p>Everyone who's signed up as a customer, with their order and delivery activity.</p>
     </div>
 
-    <div class="stat-row" id="statRow"></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total customers</div><div class="value" id="statTotal">—</div></div>
+      <div class="stat-card"><div class="label">Placed an order</div><div class="value" id="statActive">—</div></div>
+      <div class="stat-card"><div class="label">New this week</div><div class="value" id="statNew">—</div></div>
+    </div>
 
-    <div id="customersList"><div class="empty-mini">Loading...</div></div>
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Search by name or email..." />
+    </div>
+
+    <div class="panel">
+      <table class="customer-table" id="customerTable" style="display:none;">
+        <thead>
+          <tr><th>Customer</th><th>Joined</th><th>Orders</th><th>Deliveries</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="customerTableBody"></tbody>
+      </table>
+      <div class="empty-mini" id="emptyState">Loading...</div>
+    </div>
   </main>
-</div>
-
-<div class="drawer-overlay" id="drawerOverlay">
-  <div class="drawer" id="drawer" onclick="event.stopPropagation()">
-    <button class="drawer-close" id="drawerClose">✕</button>
-    <h2 id="drawerName">—</h2>
-    <p class="sub" id="drawerContact">—</p>
-    <div style="margin-bottom:18px;">
-      <span class="status-pill" id="drawerStatusPill"></span>
-      <button id="drawerStatusBtn" style="margin-left:10px; padding:6px 14px; border-radius:8px; border:1px solid var(--line); background:var(--white); font-size:12.5px; font-weight:700; cursor:pointer; font-family:var(--font-body);"></button>
-    </div>
-    <div class="drawer-stat-grid">
-      <div class="drawer-stat"><div class="label">Total orders</div><div class="value" id="drawerOrders">0</div></div>
-      <div class="drawer-stat"><div class="label">Total spent</div><div class="value" id="drawerSpent">₦0</div></div>
-    </div>
-    <h3>Recent orders</h3>
-    <div id="drawerOrdersList"></div>
-  </div>
 </div>
 
 <script src="/shared/supabase-client.js"></script>
@@ -151,12 +127,10 @@
   const session = window.JWingsDB.getSession();
   if (!session) window.location.href = "/customer/login.html?redirect=/admin/customers.html";
 
-  let customers = [];
-  let ordersByCustomer = {}; // customer_id -> array of orders
+  let allCustomers = [];
 
-  function money(amount, currency) {
-    const symbol = (currency || "NGN") === "NGN" ? "₦" : (currency || "");
-    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
 
   async function init() {
@@ -165,148 +139,125 @@
       window.location.href = "/customer/dashboard.html";
       return;
     }
-    await loadData();
+
+    await loadCustomers();
   }
 
-  async function loadData() {
-    const container = document.getElementById("customersList");
+  async function loadCustomers() {
+    const table = document.getElementById("customerTable");
+    const tbody = document.getElementById("customerTableBody");
+    const empty = document.getElementById("emptyState");
+
     try {
-      const [profiles, orders] = await Promise.all([
-        window.JWingsDB.select("profiles", "select=*&role=eq.customer&order=created_at.desc", session.access_token),
-        window.JWingsDB.select("orders", "select=id,customer_id,total,buyer_currency,status,order_number,created_at&order=created_at.desc", session.access_token),
+      const [customers, orders, shipments] = await Promise.all([
+        window.JWingsDB.select("profiles", "select=id,full_name,email,created_at,status&role=eq.customer&order=created_at.desc", session.access_token),
+        window.JWingsDB.select("orders", "select=customer_id", session.access_token),
+        window.JWingsDB.select("shipments", "select=sender_id", session.access_token),
       ]);
 
-      customers = profiles;
-      ordersByCustomer = {};
-      orders.forEach((o) => {
-        if (!ordersByCustomer[o.customer_id]) ordersByCustomer[o.customer_id] = [];
-        ordersByCustomer[o.customer_id].push(o);
-      });
+      const orderCounts = {};
+      orders.forEach(o => { orderCounts[o.customer_id] = (orderCounts[o.customer_id] || 0) + 1; });
 
-      renderStats(orders);
+      const shipmentCounts = {};
+      shipments.forEach(s => { shipmentCounts[s.sender_id] = (shipmentCounts[s.sender_id] || 0) + 1; });
+
+      allCustomers = customers.map(c => ({
+        ...c,
+        orderCount: orderCounts[c.id] || 0,
+        shipmentCount: shipmentCounts[c.id] || 0,
+      }));
+
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      document.getElementById("statTotal").textContent = allCustomers.length;
+      document.getElementById("statActive").textContent = allCustomers.filter(c => c.orderCount > 0).length;
+      document.getElementById("statNew").textContent = allCustomers.filter(c => new Date(c.created_at).getTime() > weekAgo).length;
+
       render();
     } catch (err) {
-      container.innerHTML = `<div class="empty-mini">Couldn't load customers right now.</div>`;
+      empty.textContent = `Couldn't load customers: ${err.message}`;
     }
-  }
-
-  function renderStats(orders) {
-    const totalSpent = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-    document.getElementById("statRow").innerHTML = `
-      <div class="stat-chip"><div class="label">Customers</div><div class="value">${customers.length}</div></div>
-      <div class="stat-chip"><div class="label">Total orders</div><div class="value">${orders.length}</div></div>
-      <div class="stat-chip"><div class="label">Total revenue</div><div class="value">${money(totalSpent)}</div></div>
-    `;
   }
 
   function render() {
-    const term = document.getElementById("searchInput").value.trim().toLowerCase();
-    let list = customers;
-    if (term) {
+    const table = document.getElementById("customerTable");
+    const tbody = document.getElementById("customerTableBody");
+    const empty = document.getElementById("emptyState");
+    const search = document.getElementById("searchInput").value.trim().toLowerCase();
+
+    let list = allCustomers;
+    if (search) {
       list = list.filter(c =>
-        (c.full_name || "").toLowerCase().includes(term) ||
-        (c.email || "").toLowerCase().includes(term) ||
-        (c.phone || "").toLowerCase().includes(term)
+        (c.full_name || "").toLowerCase().includes(search) ||
+        (c.email || "").toLowerCase().includes(search)
       );
     }
 
-    const container = document.getElementById("customersList");
     if (list.length === 0) {
-      container.innerHTML = `<div class="empty-mini">No customers match.</div>`;
+      table.style.display = "none";
+      empty.style.display = "block";
+      empty.textContent = allCustomers.length === 0 ? "No customers have signed up yet." : "No customers match your search.";
       return;
     }
 
-    const rows = list.map(c => {
-      const custOrders = ordersByCustomer[c.id] || [];
-      const spent = custOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-      const joined = c.created_at ? new Date(c.created_at).toLocaleDateString() : "—";
+    empty.style.display = "none";
+    table.style.display = "table";
+    tbody.innerHTML = list.map(c => {
+      const status = c.status || "active";
       return `
-        <div class="cust-row" data-id="${c.id}">
-          <div>
-            <div class="cust-name">${c.full_name || "Unnamed customer"}</div>
-            <div class="cust-contact">${c.email || ""}${c.phone ? " · " + c.phone : ""}</div>
-            <span class="status-pill ${c.status}">${c.status === "suspended" ? "Suspended" : "Active"}</span>
-          </div>
-          <div class="cust-joined">Joined ${joined}</div>
-          <div class="cust-orders">${custOrders.length} order${custOrders.length === 1 ? "" : "s"}</div>
-          <div class="cust-spent">${money(spent)}</div>
-        </div>`;
+      <tr>
+        <td>
+          <div class="cust-name">${c.full_name || "—"}</div>
+          <div class="cust-email">${c.email}</div>
+        </td>
+        <td class="cust-joined">${formatDate(c.created_at)}</td>
+        <td><span class="count-pill">${c.orderCount}</span></td>
+        <td><span class="count-pill">${c.shipmentCount}</span></td>
+        <td><span class="status-pill ${status}">${status === "active" ? "Active" : "Suspended"}</span></td>
+        <td>
+          ${status === "active"
+            ? `<button class="row-action-btn suspend" data-action="suspend" data-id="${c.id}">Suspend</button>`
+            : `<button class="row-action-btn reactivate" data-action="reactivate" data-id="${c.id}">Reactivate</button>`}
+        </td>
+      </tr>`;
     }).join("");
 
-    container.innerHTML = `
-      <div class="customer-table">
-        <div class="cust-row head"><div>Customer</div><div>Joined</div><div>Orders</div><div>Spent</div></div>
-        ${rows}
-      </div>`;
+    attachHandlers();
+  }
 
-    container.querySelectorAll(".cust-row[data-id]").forEach((row) => {
-      row.addEventListener("click", () => openDrawer(row.getAttribute("data-id")));
+  function attachHandlers() {
+    document.querySelectorAll('[data-action="suspend"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Suspend this customer's account?")) return;
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        try {
+          await window.JWingsDB.update("profiles", `id=eq.${id}`, { status: "suspended" }, session.access_token);
+          const c = allCustomers.find(x => x.id === id);
+          if (c) c.status = "suspended";
+          render();
+        } catch (err) {
+          alert(err.message || "Couldn't suspend this customer.");
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="reactivate"]').forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        try {
+          await window.JWingsDB.update("profiles", `id=eq.${id}`, { status: "active" }, session.access_token);
+          const c = allCustomers.find(x => x.id === id);
+          if (c) c.status = "active";
+          render();
+        } catch (err) {
+          alert(err.message || "Couldn't reactivate this customer.");
+          btn.disabled = false;
+        }
+      });
     });
   }
-
-  function openDrawer(customerId) {
-    const cust = customers.find(c => c.id === customerId);
-    const custOrders = ordersByCustomer[customerId] || [];
-    const spent = custOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-
-    document.getElementById("drawerName").textContent = cust.full_name || "Unnamed customer";
-    document.getElementById("drawerContact").textContent = `${cust.email || ""}${cust.phone ? " · " + cust.phone : ""}`;
-    document.getElementById("drawerOrders").textContent = custOrders.length;
-    document.getElementById("drawerSpent").textContent = money(spent);
-
-    const pill = document.getElementById("drawerStatusPill");
-    const btn = document.getElementById("drawerStatusBtn");
-    pill.className = `status-pill ${cust.status}`;
-    pill.textContent = cust.status === "suspended" ? "Suspended" : "Active";
-    if (cust.status === "suspended") {
-      btn.textContent = "Reactivate";
-      btn.style.color = "#1e9e6a";
-      btn.onclick = () => setCustomerStatus(cust.id, "active");
-    } else {
-      btn.textContent = "Suspend";
-      btn.style.color = "#d64545";
-      btn.onclick = () => {
-        if (confirm("Suspend this customer? They'll keep access to their account and order history, but won't be able to place new orders.")) {
-          setCustomerStatus(cust.id, "suspended");
-        }
-      };
-    }
-
-    const listEl = document.getElementById("drawerOrdersList");
-    if (custOrders.length === 0) {
-      listEl.innerHTML = `<p style="font-size:13px; color:#666a80;">No orders yet.</p>`;
-    } else {
-      listEl.innerHTML = custOrders.slice(0, 15).map(o => `
-        <div class="order-line">
-          <div>
-            <div class="num">${o.order_number}</div>
-            <div class="status">${o.status} · ${new Date(o.created_at).toLocaleDateString()}</div>
-          </div>
-          <div>${money(o.total, o.buyer_currency)}</div>
-        </div>`).join("");
-    }
-
-    document.getElementById("drawerOverlay").classList.add("show");
-  }
-
-  async function setCustomerStatus(customerId, newStatus) {
-    try {
-      await window.JWingsDB.update("profiles", `id=eq.${customerId}`, { status: newStatus }, session.access_token);
-      const cust = customers.find(c => c.id === customerId);
-      if (cust) cust.status = newStatus;
-      render();
-      openDrawer(customerId);
-    } catch (err) {
-      alert("Couldn't update this customer's status.");
-    }
-  }
-
-  document.getElementById("drawerOverlay").addEventListener("click", () => {
-    document.getElementById("drawerOverlay").classList.remove("show");
-  });
-  document.getElementById("drawerClose").addEventListener("click", () => {
-    document.getElementById("drawerOverlay").classList.remove("show");
-  });
 
   document.getElementById("searchInput").addEventListener("input", render);
 

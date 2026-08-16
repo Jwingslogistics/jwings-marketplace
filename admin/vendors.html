@@ -77,6 +77,8 @@
   .reactivate-btn { background: none; border: 1px solid var(--line) !important; color: var(--ink); }
 
   .empty-mini { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 14px; }
+  .action-error { font-size: 12px; color: var(--danger); margin-top: 8px; display: none; width: 100%; }
+  .action-error.show { display: block; }
 </style>
 </head>
 <body>
@@ -148,7 +150,7 @@
       );
       render();
     } catch (err) {
-      container.innerHTML = `<div class="empty-mini">Couldn't load vendors right now.</div>`;
+      container.innerHTML = `<div class="empty-mini">Couldn't load vendors right now: ${err.message}</div>`;
     }
   }
 
@@ -187,6 +189,7 @@
               ${!v.is_verified ? `<button class="verify-btn" data-action="verify" data-id="${v.id}">Mark verified</button>` : ""}
               ${v.status !== "suspended" ? `<button class="suspend-btn" data-action="suspend" data-id="${v.id}">Suspend</button>` : `<button class="reactivate-btn" data-action="reactivate" data-id="${v.id}">Reactivate</button>`}
             </div>
+            <div class="action-error" id="err-${v.id}"></div>
           </div>
         </div>`;
     }).join("");
@@ -194,15 +197,23 @@
     attachHandlers();
   }
 
+  function showActionError(vendorId, message) {
+    const el = document.getElementById(`err-${vendorId}`);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add("show");
+  }
+
   function attachHandlers() {
     document.querySelectorAll('[data-action="activate"]').forEach((btn) => {
       btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
         btn.disabled = true;
         try {
-          await window.JWingsDB.update("vendors", `id=eq.${btn.getAttribute("data-id")}`, { status: "active" }, session.access_token);
+          await window.JWingsDB.update("vendors", `id=eq.${id}`, { status: "active" }, session.access_token);
           await loadVendors();
         } catch (err) {
-          alert("Couldn't activate this vendor.");
+          showActionError(id, err.message || "Couldn't activate this vendor.");
           btn.disabled = false;
         }
       });
@@ -210,12 +221,13 @@
 
     document.querySelectorAll('[data-action="verify"]').forEach((btn) => {
       btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
         btn.disabled = true;
         try {
-          await window.JWingsDB.update("vendors", `id=eq.${btn.getAttribute("data-id")}`, { is_verified: true }, session.access_token);
+          await window.JWingsDB.update("vendors", `id=eq.${id}`, { is_verified: true }, session.access_token);
           await loadVendors();
         } catch (err) {
-          alert("Couldn't verify this vendor.");
+          showActionError(id, err.message || "Couldn't verify this vendor.");
           btn.disabled = false;
         }
       });
@@ -223,23 +235,25 @@
 
     document.querySelectorAll('[data-action="suspend"]').forEach((btn) => {
       btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
         if (!confirm("Suspend this vendor? Their products will remain listed but this flags the account for review.")) return;
         try {
-          await window.JWingsDB.update("vendors", `id=eq.${btn.getAttribute("data-id")}`, { status: "suspended" }, session.access_token);
+          await window.JWingsDB.update("vendors", `id=eq.${id}`, { status: "suspended" }, session.access_token);
           await loadVendors();
         } catch (err) {
-          alert("Couldn't suspend this vendor.");
+          showActionError(id, err.message || "Couldn't suspend this vendor.");
         }
       });
     });
 
     document.querySelectorAll('[data-action="reactivate"]').forEach((btn) => {
       btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
         try {
-          await window.JWingsDB.update("vendors", `id=eq.${btn.getAttribute("data-id")}`, { status: "active" }, session.access_token);
+          await window.JWingsDB.update("vendors", `id=eq.${id}`, { status: "active" }, session.access_token);
           await loadVendors();
         } catch (err) {
-          alert("Couldn't reactivate this vendor.");
+          showActionError(id, err.message || "Couldn't reactivate this vendor.");
         }
       });
     });
