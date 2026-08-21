@@ -201,7 +201,7 @@
       );
 
       const earned = txs.filter(t => t.type === "credit").reduce((sum, t) => sum + Number(t.amount), 0);
-      const withdrawn = txs.filter(t => t.type === "withdrawal").reduce((sum, t) => sum + Number(t.amount), 0);
+      const withdrawn = txs.filter(t => t.type === "withdrawal" && t.status === "completed").reduce((sum, t) => sum + Number(t.amount), 0);
       document.getElementById("statEarned").textContent = money(earned, "NGN");
       document.getElementById("statWithdrawn").textContent = money(withdrawn, "NGN");
 
@@ -210,14 +210,17 @@
         return;
       }
 
+      const STATUS_LABEL = { pending: "Pending review", completed: "Paid", failed: "Rejected" };
+
       list.innerHTML = txs.map(t => {
         const isPositive = t.type === "credit";
+        const showStatus = t.type === "withdrawal";
         return `
           <div class="tx-row">
             <div class="tx-icon ${t.type}">${TX_ICONS[t.type] || "💳"}</div>
             <div class="tx-main">
               <div class="tx-desc">${t.description || t.type}</div>
-              <div class="tx-date">${new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</div>
+              <div class="tx-date">${new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}${showStatus ? " · " + (STATUS_LABEL[t.status] || t.status) : ""}</div>
             </div>
             <div class="tx-amount ${isPositive ? "positive" : "negative"}">${isPositive ? "+" : "−"}${money(t.amount, "NGN")}</div>
           </div>`;
@@ -265,6 +268,7 @@
 
       document.getElementById("walletBalance").textContent = money(newBalance, "NGN");
       modal.classList.remove("show");
+      alert("Withdrawal request submitted — it's pending admin review before payout.");
       await loadTransactions();
     } catch (err) {
       errorEl.textContent = (err.message || "").includes("exceeds")

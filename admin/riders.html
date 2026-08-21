@@ -71,6 +71,25 @@
   .reactivate-btn { background: none; border: 1px solid var(--line) !important; color: var(--ink); }
 
   .empty-mini { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 14px; }
+
+  .section-heading { font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--navy-900); font-weight: 700; margin: 28px 0 12px; }
+  .section-heading:first-child { margin-top: 0; }
+  .withdraw-card {
+    background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .withdraw-info { flex: 1; min-width: 180px; }
+  .withdraw-name { font-size: 14px; font-weight: 700; }
+  .withdraw-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .withdraw-amount { font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--navy-900); }
+  .withdraw-actions { display: flex; gap: 8px; }
+  .withdraw-actions button {
+    padding: 8px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font-body); border: none;
+  }
+  .approve-pay-btn { background: var(--success); color: var(--white); }
+  .approve-pay-btn:hover { background: #167f56; }
+  .reject-pay-btn { background: none; border: 1px solid #f5c6c2 !important; color: var(--danger); }
+  .reject-pay-btn:hover { background: #fdecea; }
 </style>
 </head>
 <body>
@@ -98,6 +117,11 @@
       <p>Review uploaded documents and activate riders for full delivery access.</p>
     </div>
 
+    <div class="section-heading">Pending withdrawal requests</div>
+    <div id="withdrawalsList"><div class="empty-mini">Loading...</div></div>
+
+    <div class="section-heading">Riders</div>
+
     <div class="filter-tabs" id="filterTabs">
       <button class="filter-tab active" data-filter="all">All</button>
       <button class="filter-tab" data-filter="pending">Pending review</button>
@@ -117,6 +141,10 @@
   let allRiders = [];
   let activeFilter = "all";
 
+  function money(amount) {
+    return `₦${Number(amount || 0).toLocaleString()}`;
+  }
+
   async function init() {
     const profile = await window.JWingsDB.getMyProfile(session.access_token);
     if (!profile || profile.role !== "admin") {
@@ -124,7 +152,71 @@
       return;
     }
 
-    await loadRiders();
+    await Promise.all([loadRiders(), loadWithdrawals()]);
+  }
+
+  async function loadWithdrawals() {
+    const container = document.getElementById("withdrawalsList");
+    try {
+      const rows = await window.JWingsDB.select(
+        "wallet_transactions",
+        "select=*,riders(rider_code,profiles(full_name,phone))&owner_type=eq.rider&type=eq.withdrawal&status=eq.pending&order=created_at.asc",
+        session.access_token
+      );
+
+      if (rows.length === 0) {
+        container.innerHTML = `<div class="empty-mini">No pending withdrawal requests.</div>`;
+        return;
+      }
+
+      container.innerHTML = rows.map(t => {
+        const rider = t.riders;
+        const name = rider && rider.profiles ? rider.profiles.full_name : (rider ? rider.rider_code : "Unknown rider");
+        const contact = rider && rider.profiles ? rider.profiles.phone || "" : "";
+        return `
+          <div class="withdraw-card" data-tx-id="${t.id}">
+            <div class="withdraw-info">
+              <div class="withdraw-name">${name}</div>
+              <div class="withdraw-meta">${rider ? rider.rider_code : ""}${contact ? " · " + contact : ""} · Requested ${new Date(t.created_at).toLocaleDateString()}</div>
+            </div>
+            <div class="withdraw-amount">${money(t.amount)}</div>
+            <div class="withdraw-actions">
+              <button class="approve-pay-btn" data-action="approve-withdrawal" data-id="${t.id}">Mark as paid</button>
+              <button class="reject-pay-btn" data-action="reject-withdrawal" data-id="${t.id}">Reject</button>
+            </div>
+          </div>`;
+      }).join("");
+
+      container.querySelectorAll('[data-action="approve-withdrawal"]').forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("Confirm you've actually sent this payout? This marks the request as paid.")) return;
+          btn.disabled = true;
+          try {
+            await window.JWingsDB.rpc("approve_rider_withdrawal", { p_transaction_id: btn.getAttribute("data-id") }, session.access_token);
+            await loadWithdrawals();
+          } catch (err) {
+            alert(err.message || "Couldn't approve this withdrawal.");
+            btn.disabled = false;
+          }
+        });
+      });
+
+      container.querySelectorAll('[data-action="reject-withdrawal"]').forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("Reject this request? The amount will be refunded to the rider's balance.")) return;
+          btn.disabled = true;
+          try {
+            await window.JWingsDB.rpc("reject_rider_withdrawal", { p_transaction_id: btn.getAttribute("data-id") }, session.access_token);
+            await loadWithdrawals();
+          } catch (err) {
+            alert(err.message || "Couldn't reject this withdrawal.");
+            btn.disabled = false;
+          }
+        });
+      });
+    } catch (err) {
+      container.innerHTML = `<div class="empty-mini">Couldn't load withdrawal requests right now.</div>`;
+    }
   }
 
   async function loadRiders() {
