@@ -160,7 +160,7 @@
     try {
       const rows = await window.JWingsDB.select(
         "wallet_transactions",
-        "select=*,riders(rider_code,profiles(full_name,phone))&owner_type=eq.rider&type=eq.withdrawal&status=eq.pending&order=created_at.asc",
+        "select=*,riders(rider_code,bank_name,account_number,account_name,profiles(full_name,phone))&owner_type=eq.rider&type=eq.withdrawal&status=eq.pending&order=created_at.asc",
         session.access_token
       );
 
@@ -169,19 +169,32 @@
         return;
       }
 
+      const now = Date.now();
+
       container.innerHTML = rows.map(t => {
         const rider = t.riders;
         const name = rider && rider.profiles ? rider.profiles.full_name : (rider ? rider.rider_code : "Unknown rider");
         const contact = rider && rider.profiles ? rider.profiles.phone || "" : "";
+        const bankLine = rider && rider.bank_name
+          ? `${rider.account_name} · ${rider.bank_name} · ${rider.account_number}`
+          : `⚠️ No bank details on file`;
+
+        const requestedAt = new Date(t.created_at).getTime();
+        const eligibleAt = requestedAt + 24 * 60 * 60 * 1000;
+        const isEligible = now >= eligibleAt;
+        const waitLabel = isEligible ? "" : `Eligible for payout after ${new Date(eligibleAt).toLocaleString()}`;
+
         return `
           <div class="withdraw-card" data-tx-id="${t.id}">
             <div class="withdraw-info">
               <div class="withdraw-name">${name}</div>
               <div class="withdraw-meta">${rider ? rider.rider_code : ""}${contact ? " · " + contact : ""} · Requested ${new Date(t.created_at).toLocaleDateString()}</div>
+              <div class="withdraw-meta">${bankLine}</div>
+              ${waitLabel ? `<div class="withdraw-meta" style="color:#f57c00;">⏳ ${waitLabel}</div>` : ""}
             </div>
             <div class="withdraw-amount">${money(t.amount)}</div>
             <div class="withdraw-actions">
-              <button class="approve-pay-btn" data-action="approve-withdrawal" data-id="${t.id}">Mark as paid</button>
+              <button class="approve-pay-btn" data-action="approve-withdrawal" data-id="${t.id}" ${isEligible ? "" : "disabled"} title="${isEligible ? "" : "Not yet eligible — 24hr review window"}">Mark as paid</button>
               <button class="reject-pay-btn" data-action="reject-withdrawal" data-id="${t.id}">Reject</button>
             </div>
           </div>`;

@@ -95,6 +95,22 @@
   .modal-submit { background: var(--orange-500); color: var(--white); }
   .modal-submit:hover { background: #e06f00; }
   .modal-submit:disabled { background: #f3b877; cursor: not-allowed; }
+
+  .bank-field { margin-bottom: 12px; }
+  .bank-field label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; color: var(--ink); }
+  .bank-field input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-family: var(--font-body);
+  }
+  .bank-status { font-size: 12.5px; margin-bottom: 14px; padding: 10px 12px; border-radius: 8px; }
+  .bank-status.missing { background: #fff4e5; color: #8a5a00; border: 1px solid #ffdba3; }
+  .bank-status.set { background: #e9f9f1; color: var(--success); border: 1px solid #b9ecd4; }
+  .bank-save-btn {
+    background: var(--navy-700); color: var(--white); border: none; padding: 10px 18px;
+    border-radius: 9px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: var(--font-body); margin-top: 4px;
+  }
+  .bank-save-btn:hover { background: var(--navy-900); }
+  .bank-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -130,6 +146,15 @@
     <div class="stat-card"><div class="label">Deliveries completed</div><div class="value" id="statDeliveries">—</div></div>
   </div>
 
+  <div class="panel" style="margin-bottom:20px;">
+    <h3>Payout bank details</h3>
+    <div id="bankStatus"></div>
+    <div class="bank-field"><label>Bank name</label><input type="text" id="bankName" placeholder="e.g. GTBank" /></div>
+    <div class="bank-field"><label>Account number</label><input type="text" id="accountNumber" placeholder="10-digit account number" /></div>
+    <div class="bank-field"><label>Account name</label><input type="text" id="accountName" placeholder="Name on the account" /></div>
+    <button class="bank-save-btn" id="saveBankBtn">Save bank details</button>
+  </div>
+
   <div class="panel">
     <h3>Transaction history</h3>
     <div id="txList"><div class="empty-mini">Loading...</div></div>
@@ -142,7 +167,7 @@
     <div class="avail" id="modalAvail">Available: ₦0</div>
     <div class="error-text" id="withdrawError"></div>
     <input type="number" id="withdrawAmount" min="1" step="0.01" placeholder="Amount to withdraw" />
-    <div style="font-size:12px; color:#666a80; margin-bottom:8px;">This deducts from your balance immediately. Actual bank transfer isn't automated yet — payouts are still sent manually.</div>
+    <div style="font-size:12px; color:#666a80; margin-bottom:8px;">This deducts from your balance right away and is reviewed by JWings — payouts are typically processed within 24 hours to the bank account on file.</div>
     <div class="modal-actions">
       <button class="modal-cancel" id="withdrawCancelBtn" type="button">Cancel</button>
       <button class="modal-submit" id="withdrawSubmitBtn" type="button">Submit request</button>
@@ -178,9 +203,56 @@
     document.getElementById("walletBalance").textContent = money(rider.wallet_balance, "NGN");
     document.getElementById("modalAvail").textContent = `Available: ${money(rider.wallet_balance, "NGN")}`;
 
+    renderBankStatus();
+    document.getElementById("bankName").value = rider.bank_name || "";
+    document.getElementById("accountNumber").value = rider.account_number || "";
+    document.getElementById("accountName").value = rider.account_name || "";
+
     await loadTransactions();
     await loadDeliveryCount();
   }
+
+  function hasBankDetails() {
+    return !!(rider.bank_name && rider.account_number && rider.account_name);
+  }
+
+  function renderBankStatus() {
+    const el = document.getElementById("bankStatus");
+    if (hasBankDetails()) {
+      el.className = "bank-status set";
+      el.textContent = `✓ Payouts go to ${rider.account_name} · ${rider.bank_name} · ${rider.account_number}`;
+    } else {
+      el.className = "bank-status missing";
+      el.textContent = "Add your bank details below before requesting a withdrawal.";
+    }
+  }
+
+  document.getElementById("saveBankBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("saveBankBtn");
+    const bankName = document.getElementById("bankName").value.trim();
+    const accountNumber = document.getElementById("accountNumber").value.trim();
+    const accountName = document.getElementById("accountName").value.trim();
+
+    if (!bankName || !accountNumber || !accountName) {
+      alert("Please fill in all three bank detail fields.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+    try {
+      await window.JWingsDB.update("riders", `id=eq.${rider.id}`, {
+        bank_name: bankName, account_number: accountNumber, account_name: accountName,
+      }, session.access_token);
+      rider.bank_name = bankName; rider.account_number = accountNumber; rider.account_name = accountName;
+      renderBankStatus();
+    } catch (err) {
+      alert("Couldn't save your bank details. Please try again.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Save bank details";
+    }
+  });
 
   async function loadDeliveryCount() {
     try {
@@ -232,6 +304,11 @@
 
   const modal = document.getElementById("withdrawModal");
   document.getElementById("withdrawBtn").addEventListener("click", () => {
+    if (!hasBankDetails()) {
+      alert("Please add your bank details first so we know where to send your payout.");
+      document.getElementById("bankName").scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     document.getElementById("withdrawAmount").value = "";
     document.getElementById("withdrawError").classList.remove("show");
     modal.classList.add("show");
