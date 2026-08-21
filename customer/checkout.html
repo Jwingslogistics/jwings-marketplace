@@ -30,6 +30,8 @@
 
   .page-head { padding: 32px 6vw 8px; }
   .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
+  .currency-note { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .currency-note a { color: var(--navy-700); font-weight: 600; text-decoration: underline; }
 
   .checkout-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; padding: 20px 6vw 72px; align-items: start; }
   @media (max-width: 860px) { .checkout-layout { grid-template-columns: 1fr; } }
@@ -92,6 +94,7 @@
 
 <div class="page-head">
   <h1>Checkout</h1>
+  <div class="currency-note" id="currencyNote"></div>
 </div>
 
 <div id="pageContent">
@@ -125,19 +128,19 @@
             <span class="left"><input type="radio" name="deliveryType" value="standard" checked />
               <span><span class="label">Standard</span><br/><span class="sub">2–3 business days</span></span>
             </span>
-            <span class="fee">₦1,500</span>
+            <span class="fee" data-fee-display>₦1,500</span>
           </label>
           <label class="delivery-option" data-fee="2500">
             <span class="left"><input type="radio" name="deliveryType" value="express" />
               <span><span class="label">Express</span><br/><span class="sub">Next-day delivery</span></span>
             </span>
-            <span class="fee">₦2,500</span>
+            <span class="fee" data-fee-display>₦2,500</span>
           </label>
           <label class="delivery-option" data-fee="4000">
             <span class="left"><input type="radio" name="deliveryType" value="same_day" />
               <span><span class="label">Same-day</span><br/><span class="sub">Delivered today</span></span>
             </span>
-            <span class="fee">₦4,000</span>
+            <span class="fee" data-fee-display>₦4,000</span>
           </label>
         </div>
       </div>
@@ -158,19 +161,23 @@
 
 <script src="/shared/supabase-client.js"></script>
 <script>
-  const SERVICE_FEE = 500;
-  let selectedFee = 1500;
+  // Fees are always defined internally in NGN; converted to the buyer's
+  // chosen currency below so everything on the order is one consistent currency.
+  const SERVICE_FEE_NGN = 500;
+  let selectedFeeNGN = 1500;
   let selectedDeliveryType = "standard";
 
   const session = window.JWingsDB.getSession();
   if (!session) window.location.href = "/customer/login.html";
 
   function money(amount, currency) {
-    const symbol = currency === "NGN" ? "₦" : (currency || "");
-    return `${symbol}${Number(amount).toLocaleString()}`;
+    return window.JWingsDB.formatMoney(amount, currency);
   }
 
   let cart = [];
+  let buyerCurrency = "NGN";
+  let ngnToBuyerRate = 1;
+  const rateCache = {}; // "FROM_TO" -> rate
 
   async function initCheckout() {
     try {
@@ -184,18 +191,23 @@
         return;
       }
 
+      buyerCurrency = (profile && profile.currency) || "NGN";
+      if (buyerCurrency !== "NGN") {
+        document.getElementById("currencyNote").innerHTML =
+          `Totals shown in ${buyerCurrency}. <a href="/customer/profile.html">Change currency</a>`;
+      }
+
       const rows = await window.JWingsDB.select(
         "cart_items",
         `select=*,products(id,name,price,currency,stock,vendor_id,vendors(store_name,city,state))&customer_id=eq.${session.user.id}`,
         session.access_token
       );
-      // Flatten into the same shape the rest of this file already expects.
       cart = rows.filter(r => r.products).map(r => ({
         cart_item_id: r.id,
         product_id: r.products.id,
         name: r.products.name,
-        price: r.products.price,
-        currency: r.products.currency,
+        price: r.products.price, // vendor's native price, never mutated
+        currency: r.products.currency, // vendor's native currency
         vendor_id: r.products.vendor_id,
         vendor_name: r.products.vendors ? r.products.vendors.store_name : "JWings Vendor",
         vendor_city: r.products.vendors ? r.products.vendors.city : null,
@@ -209,27 +221,51 @@
         return;
       }
 
+      // Pre-fetch every rate we'll need: each vendor currency -> buyer currency,
+      // plus NGN -> buyer currency for the delivery/service fees.
+      const currenciesNeeded = [...new Set([...cart.map(i => i.currency), "NGN"])];
+      await Promise.all(currenciesNeeded.map(async (c) => {
+        if (c === buyerCurrency) { rateCache[`${c}_${buyerCurrency}`] = 1; return; }
+        try {
+          rateCache[`${c}_${buyerCurrency}`] = await window.JWingsDB.getExchangeRate(c, buyerCurrency, session.access_token);
+        } catch (err) {
+          rateCache[`${c}_${buyerCurrency}`] = 1; // fall back to 1:1 rather than block checkout
+        }
+      }));
+      ngnToBuyerRate = rateCache[`NGN_${buyerCurrency}`] || 1;
+
       renderSummary();
     } catch (err) {
       showError("Couldn't load your cart right now. Please refresh.");
     }
   }
 
+  function itemUnitPriceBuyer(item) {
+    const rate = rateCache[`${item.currency}_${buyerCurrency}`] || 1;
+    return item.price * rate;
+  }
+
   function renderSummary() {
-    const currency = cart[0].currency;
-    const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const total = subtotal + selectedFee + SERVICE_FEE;
+    const subtotal = cart.reduce((sum, i) => sum + itemUnitPriceBuyer(i) * i.quantity, 0);
+    const deliveryFeeBuyer = selectedFeeNGN * ngnToBuyerRate;
+    const serviceFeeBuyer = SERVICE_FEE_NGN * ngnToBuyerRate;
+    const total = subtotal + deliveryFeeBuyer + serviceFeeBuyer;
 
     document.getElementById("miniItems").innerHTML = cart.map(i => `
       <div class="mini-item">
         <span class="name">${i.name} × ${i.quantity}</span>
-        <span>${money(i.price * i.quantity, i.currency)}</span>
+        <span>${money(itemUnitPriceBuyer(i) * i.quantity, buyerCurrency)}</span>
       </div>`).join("");
 
-    document.getElementById("sumSubtotal").textContent = money(subtotal, currency);
-    document.getElementById("sumDelivery").textContent = money(selectedFee, currency);
-    document.getElementById("sumService").textContent = money(SERVICE_FEE, currency);
-    document.getElementById("sumTotal").textContent = money(total, currency);
+    document.getElementById("sumSubtotal").textContent = money(subtotal, buyerCurrency);
+    document.getElementById("sumDelivery").textContent = money(deliveryFeeBuyer, buyerCurrency);
+    document.getElementById("sumService").textContent = money(serviceFeeBuyer, buyerCurrency);
+    document.getElementById("sumTotal").textContent = money(total, buyerCurrency);
+
+    document.querySelectorAll(".delivery-option").forEach((el) => {
+      const feeNGN = parseInt(el.getAttribute("data-fee"), 10);
+      el.querySelector("[data-fee-display]").textContent = money(feeNGN * ngnToBuyerRate, buyerCurrency);
+    });
   }
 
   document.querySelectorAll(".delivery-option").forEach((el) => {
@@ -237,7 +273,7 @@
       document.querySelectorAll(".delivery-option").forEach(o => o.classList.remove("selected"));
       el.classList.add("selected");
       el.querySelector("input").checked = true;
-      selectedFee = parseInt(el.getAttribute("data-fee"), 10);
+      selectedFeeNGN = parseInt(el.getAttribute("data-fee"), 10);
       selectedDeliveryType = el.querySelector("input").value;
       renderSummary();
     });
@@ -265,9 +301,10 @@
 
     try {
       const profile = await window.JWingsDB.getMyProfile(session.access_token);
-      const currency = cart[0].currency;
-      const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      const total = subtotal + selectedFee + SERVICE_FEE;
+      const subtotal = cart.reduce((sum, i) => sum + itemUnitPriceBuyer(i) * i.quantity, 0);
+      const deliveryFeeBuyer = selectedFeeNGN * ngnToBuyerRate;
+      const serviceFeeBuyer = SERVICE_FEE_NGN * ngnToBuyerRate;
+      const total = subtotal + deliveryFeeBuyer + serviceFeeBuyer;
       const orderNumber = "JW" + Date.now().toString().slice(-8);
 
       // Save the delivery address for this order.
@@ -280,14 +317,14 @@
       }, session.access_token);
       const address = addresses[0];
 
-      // Create the order.
+      // Create the order — everything stored in the buyer's chosen currency.
       const orders = await window.JWingsDB.insert("orders", {
         order_number: orderNumber,
         customer_id: profile.id,
         delivery_address_id: address.id,
-        buyer_currency: currency,
-        fx_rate_to_buyer: 1,
-        subtotal, delivery_fee: selectedFee, service_fee: SERVICE_FEE, total,
+        buyer_currency: buyerCurrency,
+        fx_rate_to_buyer: rateCache[`${cart[0].currency}_${buyerCurrency}`] || 1,
+        subtotal, delivery_fee: deliveryFeeBuyer, service_fee: serviceFeeBuyer, total,
         delivery_type: selectedDeliveryType,
         order_notes: orderNotes || null,
         status: "new",
@@ -295,24 +332,25 @@
       }, session.access_token);
       const order = orders[0];
 
-      // Create one order_item per cart line.
+      // Create one order_item per cart line, with both native and
+      // buyer-currency amounts recorded.
       for (const item of cart) {
+        const unitPriceBuyer = itemUnitPriceBuyer(item);
         await window.JWingsDB.insert("order_items", {
           order_id: order.id,
           vendor_id: item.vendor_id,
           product_id: item.product_id,
           product_name: item.name,
           quantity: item.quantity,
-          unit_price: item.price,
+          unit_price: item.price, // vendor's native price
           vendor_currency: item.currency,
-          unit_price_buyer_currency: item.price,
-          line_total_buyer_currency: item.price * item.quantity,
+          unit_price_buyer_currency: unitPriceBuyer,
+          line_total_buyer_currency: unitPriceBuyer * item.quantity,
           vendor_order_status: "new",
         }, session.access_token);
       }
 
-      // Create a trackable shipment for each vendor represented in this order
-      // (most orders are single-vendor, but a cart can span more than one).
+      // Create a trackable shipment for each vendor represented in this order.
       const uniqueVendorIds = [...new Set(cart.map(i => i.vendor_id))];
       const vendors = await window.JWingsDB.select(
         "vendors", `select=id,store_name,city,state&id=in.(${uniqueVendorIds.join(",")})`, session.access_token
@@ -340,8 +378,8 @@
           package_type: "parcel",
           package_weight_kg: 1,
           delivery_type: selectedDeliveryType,
-          delivery_fee: selectedFee,
-          currency: currency,
+          delivery_fee: deliveryFeeBuyer,
+          currency: buyerCurrency,
           payment_status: "unpaid",
           status: "order_received",
         }, session.access_token);

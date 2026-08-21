@@ -31,13 +31,15 @@
 
   .page-head { padding: 32px 6vw 8px; }
   .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
+  .currency-note { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .currency-note a { color: var(--navy-700); font-weight: 600; text-decoration: underline; }
 
   .cart-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; padding: 20px 6vw 72px; align-items: start; }
   @media (max-width: 860px) { .cart-layout { grid-template-columns: 1fr; } }
 
   .cart-item {
     display: flex; gap: 16px; background: var(--white); border: 1px solid var(--line);
-    border-radius: 14px; padding: 16px; margin-bottom: 14px; align-items: center;
+    border-radius: 14px; padding: 16px; margin-bottom: 14px; align-items: center; flex-wrap: wrap;
   }
   .item-thumb {
     width: 72px; height: 72px; border-radius: 10px; background: var(--bg); flex-shrink: 0;
@@ -89,6 +91,7 @@
 
 <div class="page-head">
   <h1>Your Cart</h1>
+  <div class="currency-note" id="currencyNote"></div>
 </div>
 
 <div class="cart-layout" id="cartLayout">
@@ -110,20 +113,45 @@
   }
 
   function money(amount, currency) {
-    const symbol = currency === "NGN" ? "₦" : (currency || "");
-    return `${symbol}${Number(amount).toLocaleString()}`;
+    return window.JWingsDB.formatMoney(amount, currency);
   }
 
-  let cartRows = []; // raw cart_items rows with embedded product+vendor, kept for re-render after an update
+  let cartRows = []; // raw cart_items rows with embedded product+vendor
+  let buyerCurrency = "NGN";
+  const rateCache = {};
+
+  // Buyer-currency price for one cart row's product.
+  function convertedUnitPrice(row) {
+    const p = row.products;
+    if (p.currency === buyerCurrency) return p.price;
+    const rate = rateCache[`${p.currency}_${buyerCurrency}`];
+    return rate ? p.price * rate : p.price;
+  }
 
   async function loadCart() {
     try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      buyerCurrency = (profile && profile.currency) || "NGN";
+      if (buyerCurrency !== "NGN") {
+        document.getElementById("currencyNote").innerHTML =
+          `Prices shown converted to ${buyerCurrency}. <a href="/customer/profile.html">Change currency</a>`;
+      }
+
       const items = await window.JWingsDB.select(
         "cart_items",
         `select=*,products(id,name,price,currency,stock,images,vendor_id,vendors(store_name))&customer_id=eq.${session.user.id}&order=created_at.desc`,
         session.access_token
       );
       cartRows = items.filter(i => i.products); // drop rows whose product was deleted
+
+      // Pre-fetch any rates we need for the currencies present in the cart.
+      const uniqueCurrencies = [...new Set(cartRows.map(r => r.products.currency).filter(c => c && c !== buyerCurrency))];
+      await Promise.all(uniqueCurrencies.map(async (c) => {
+        try {
+          rateCache[`${c}_${buyerCurrency}`] = await window.JWingsDB.getExchangeRate(c, buyerCurrency, session.access_token);
+        } catch (err) { /* falls back to native price below */ }
+      }));
+
       render();
     } catch (err) {
       document.getElementById("itemsList").innerHTML = `<div class="empty-cart"><h3>Couldn't load your cart</h3><p>Please refresh the page.</p></div>`;
@@ -152,13 +180,15 @@
     itemsList.innerHTML = cartRows.map((row) => {
       const p = row.products;
       const thumb = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.name}" />` : "📦";
+      const unitPrice = convertedUnitPrice(row);
+      const showingNative = p.currency !== buyerCurrency;
       return `
         <div class="cart-item">
           <div class="item-thumb">${thumb}</div>
           <div class="item-info">
             <div class="item-vendor">${p.vendors ? p.vendors.store_name : "JWings Vendor"}</div>
             <div class="item-name">${p.name}</div>
-            <div class="item-price">${money(p.price, p.currency)} each</div>
+            <div class="item-price">${money(unitPrice, buyerCurrency)} each${showingNative ? ` (${money(p.price, p.currency)} at store)` : ""}</div>
           </div>
           <div class="item-controls">
             <div class="qty-control">
@@ -168,13 +198,12 @@
             </div>
             <button class="remove-btn" data-id="${row.id}" data-action="remove" type="button">Remove</button>
           </div>
-          <div class="item-total">${money(p.price * row.quantity, p.currency)}</div>
+          <div class="item-total">${money(unitPrice * row.quantity, buyerCurrency)}</div>
         </div>`;
     }).join("");
 
-    const subtotal = cartRows.reduce((sum, row) => sum + row.products.price * row.quantity, 0);
-    const currency = cartRows[0].products.currency;
-    document.getElementById("sumSubtotal").textContent = money(subtotal, currency);
+    const subtotal = cartRows.reduce((sum, row) => sum + convertedUnitPrice(row) * row.quantity, 0);
+    document.getElementById("sumSubtotal").textContent = money(subtotal, buyerCurrency);
 
     itemsList.querySelectorAll("[data-action]").forEach((btn) => {
       btn.addEventListener("click", async () => {

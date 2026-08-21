@@ -26,7 +26,6 @@
   img { max-width: 100%; display: block; }
   a { color: inherit; text-decoration: none; }
 
-  /* ---- Nav (shared pattern with landing) ---- */
   .nav {
     position: sticky; top: 0; z-index: 50;
     display: flex; align-items: center; justify-content: space-between;
@@ -61,13 +60,13 @@
   .search-box input { border: none; outline: none; flex: 1; font-size: 14px; font-family: var(--font-body); background: transparent; }
   @media (max-width: 900px) { .search-box { display: none; } .nav-links .link { display: none; } }
 
-  /* ---- Page header ---- */
   .page-head { padding: 40px 6vw 8px; }
   .page-head .eyebrow { color: var(--orange-500); font-size: 12.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; margin-bottom: 8px; }
   .page-head h1 { font-family: var(--font-display); font-size: clamp(26px, 3.2vw, 34px); color: var(--navy-900); font-weight: 600; }
   .page-head p { color: var(--muted); margin-top: 6px; font-size: 14.5px; }
+  .currency-note { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .currency-note a { color: var(--navy-700); font-weight: 600; text-decoration: underline; }
 
-  /* ---- Layout ---- */
   .marketplace-layout {
     display: grid;
     grid-template-columns: 240px 1fr;
@@ -77,7 +76,6 @@
   }
   @media (max-width: 860px) { .marketplace-layout { grid-template-columns: 1fr; } }
 
-  /* ---- Sidebar ---- */
   .sidebar { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 20px; }
   .sidebar-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
   .sidebar-card h4 { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--navy-900); margin-bottom: 14px; }
@@ -102,7 +100,6 @@
   .vendor-cta-card a { display: inline-block; background: var(--orange-500); color: var(--white); padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; }
   .vendor-cta-card a:hover { background: #e06f00; }
 
-  /* ---- Toolbar ---- */
   .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
   .result-count { font-size: 13.5px; color: var(--muted); }
   .sort-select {
@@ -110,7 +107,6 @@
     font-size: 13.5px; font-family: var(--font-body); background: var(--white); color: var(--ink);
   }
 
-  /* ---- Product grid ---- */
   .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
   .product-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; transition: box-shadow 0.15s ease, transform 0.15s ease; }
   .product-card:hover { transform: translateY(-3px); box-shadow: 0 16px 32px -18px rgba(26,35,126,0.28); }
@@ -119,11 +115,11 @@
   .product-info { padding: 14px 14px 16px; }
   .product-vendor { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
   .product-name { font-size: 14.5px; font-weight: 600; color: var(--ink); margin-bottom: 6px; line-height: 1.3; }
-  .product-price-row { display: flex; align-items: baseline; gap: 8px; }
+  .product-price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .product-price { font-family: var(--font-display); font-size: 16.5px; color: var(--navy-900); font-weight: 600; }
   .product-compare { font-size: 12.5px; color: var(--muted); text-decoration: line-through; }
+  .product-native-price { font-size: 11px; color: var(--muted); }
 
-  /* ---- Empty state ---- */
   .empty-state {
     grid-column: 1 / -1;
     background: var(--white); border: 1px dashed var(--line); border-radius: 16px;
@@ -162,6 +158,7 @@
   <div class="eyebrow">Marketplace</div>
   <h1>Shop from vendors across Nigeria</h1>
   <p>Every order ships with tracked JWings delivery — no separate courier needed.</p>
+  <div class="currency-note" id="currencyNote"></div>
 </div>
 
 <div class="marketplace-layout">
@@ -193,7 +190,6 @@
     </div>
 
     <div class="product-grid" id="productGrid">
-      <!-- Skeletons while loading -->
       <div class="product-card"><div class="product-thumb skeleton"></div></div>
       <div class="product-card"><div class="product-thumb skeleton"></div></div>
       <div class="product-card"><div class="product-thumb skeleton"></div></div>
@@ -209,14 +205,15 @@
   let activeSlug = "";
   let searchTerm = "";
   let sortMode = "newest";
+  let buyerCurrency = "NGN";
+  const rateCache = {}; // "FROM_TO" -> rate, populated once per page load
 
   const productGrid = document.getElementById("productGrid");
   const resultCount = document.getElementById("resultCount");
   const categoryList = document.getElementById("categoryList");
 
   function money(price, currency) {
-    const symbol = currency === "NGN" ? "₦" : (currency || "");
-    return `${symbol}${Number(price).toLocaleString()}`;
+    return window.JWingsDB.formatMoney(price, currency);
   }
 
   function renderCategories() {
@@ -240,6 +237,13 @@
     });
   }
 
+  // Returns the buyer-currency price for a product, using pre-fetched rates.
+  function convertedPrice(product) {
+    if (product.currency === buyerCurrency) return product.price;
+    const rate = rateCache[`${product.currency}_${buyerCurrency}`];
+    return rate ? product.price * rate : product.price;
+  }
+
   function renderProducts() {
     let list = [...allProducts];
 
@@ -251,8 +255,8 @@
       const q = searchTerm.trim().toLowerCase();
       list = list.filter(p => (p.name || "").toLowerCase().includes(q));
     }
-    if (sortMode === "price_asc") list.sort((a, b) => a.price - b.price);
-    else if (sortMode === "price_desc") list.sort((a, b) => b.price - a.price);
+    if (sortMode === "price_asc") list.sort((a, b) => convertedPrice(a) - convertedPrice(b));
+    else if (sortMode === "price_desc") list.sort((a, b) => convertedPrice(b) - convertedPrice(a));
     else list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     resultCount.textContent = `${list.length} product${list.length === 1 ? "" : "s"}`;
@@ -270,8 +274,10 @@
 
     productGrid.innerHTML = list.map((p) => {
       const img = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.name}" />` : "📦";
+      const shownPrice = convertedPrice(p);
+      const showingNative = p.currency !== buyerCurrency;
       const compare = p.compare_at_price && p.compare_at_price > p.price
-        ? `<span class="product-compare">${money(p.compare_at_price, p.currency)}</span>` : "";
+        ? `<span class="product-compare">${money(convertedPrice({ ...p, price: p.compare_at_price }), buyerCurrency)}</span>` : "";
       return `
         <a class="product-card" href="/customer/product.html?id=${p.id}">
           <div class="product-thumb">${img}</div>
@@ -279,16 +285,48 @@
             <div class="product-vendor">${p.vendor_name || "JWings Vendor"}</div>
             <div class="product-name">${p.name}</div>
             <div class="product-price-row">
-              <span class="product-price">${money(p.price, p.currency)}</span>
+              <span class="product-price">${money(shownPrice, buyerCurrency)}</span>
               ${compare}
             </div>
+            ${showingNative ? `<div class="product-native-price">${money(p.price, p.currency)} at store</div>` : ""}
           </div>
         </a>`;
     }).join("");
   }
 
+  async function resolveBuyerCurrency() {
+    const session = window.JWingsDB.getSession();
+    if (!session) return "NGN";
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      return (profile && profile.currency) || "NGN";
+    } catch (err) {
+      return "NGN";
+    }
+  }
+
+  async function prefetchRates(products) {
+    const uniqueCurrencies = [...new Set(products.map(p => p.currency).filter(c => c && c !== buyerCurrency))];
+    const session = window.JWingsDB.getSession();
+    const token = session ? session.access_token : null;
+
+    await Promise.all(uniqueCurrencies.map(async (c) => {
+      try {
+        rateCache[`${c}_${buyerCurrency}`] = await window.JWingsDB.getExchangeRate(c, buyerCurrency, token);
+      } catch (err) {
+        // Leave unset — convertedPrice() falls back to the native price.
+      }
+    }));
+  }
+
   async function loadData() {
     try {
+      buyerCurrency = await resolveBuyerCurrency();
+      if (buyerCurrency !== "NGN") {
+        document.getElementById("currencyNote").innerHTML =
+          `Showing prices converted to ${buyerCurrency}. <a href="/customer/profile.html">Change currency</a>`;
+      }
+
       const [categories, products] = await Promise.all([
         window.JWingsDB.select("categories", "select=id,name,slug,icon&order=name.asc"),
         window.JWingsDB.select("products", "select=*,vendors(store_name)&status=eq.active&order=created_at.desc"),
@@ -299,6 +337,8 @@
         ...p,
         vendor_name: p.vendors ? p.vendors.store_name : null,
       }));
+
+      await prefetchRates(allProducts);
 
       renderCategories();
       renderProducts();

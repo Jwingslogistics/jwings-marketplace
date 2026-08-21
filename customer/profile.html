@@ -123,6 +123,19 @@
         <label for="phone">Phone number</label>
         <input type="tel" id="phone" placeholder="0810 000 0000" />
       </div>
+      <div class="field">
+        <label for="currency">Shopping currency</label>
+        <select id="currency">
+          <option value="NGN">₦ Nigerian Naira (NGN)</option>
+          <option value="USD">$ US Dollar (USD)</option>
+          <option value="GBP">£ British Pound (GBP)</option>
+          <option value="EUR">€ Euro (EUR)</option>
+          <option value="GHS">₵ Ghanaian Cedi (GHS)</option>
+          <option value="KES">KSh Kenyan Shilling (KES)</option>
+          <option value="ZAR">R South African Rand (ZAR)</option>
+        </select>
+        <div class="hint">Prices across the marketplace are shown converted to this currency.</div>
+      </div>
       <button type="submit" class="save-btn" id="saveProfileBtn">Save changes</button>
       <span class="save-note" id="saveNote">✓ Saved</span>
     </form>
@@ -180,6 +193,7 @@
     document.getElementById("fullName").value = myProfile.full_name || "";
     document.getElementById("email").value = myProfile.email || "";
     document.getElementById("phone").value = myProfile.phone || "";
+    document.getElementById("currency").value = myProfile.currency || "NGN";
 
     await loadAddresses();
   }
@@ -196,6 +210,7 @@
       await window.JWingsDB.update("profiles", `id=eq.${myProfile.id}`, {
         full_name: document.getElementById("fullName").value.trim(),
         phone: document.getElementById("phone").value.trim(),
+        currency: document.getElementById("currency").value,
       }, session.access_token);
       note.classList.add("show");
       setTimeout(() => note.classList.remove("show"), 2500);

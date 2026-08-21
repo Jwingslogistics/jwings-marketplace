@@ -54,9 +54,10 @@
   .info-col { position: sticky; top: 84px; }
   .vendor-tag { font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
   .product-title { font-family: var(--font-display); font-size: 28px; color: var(--navy-900); margin-bottom: 12px; line-height: 1.25; }
-  .price-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; }
+  .price-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
   .price-now { font-family: var(--font-display); font-size: 30px; color: var(--navy-900); font-weight: 600; }
   .price-was { font-size: 16px; color: var(--muted); text-decoration: line-through; }
+  .native-price-note { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
   .stock-note { font-size: 13.5px; margin-bottom: 24px; }
   .stock-note.in { color: var(--success); }
   .stock-note.low { color: var(--orange-500); }
@@ -145,8 +146,20 @@
   const session = window.JWingsDB.getSession();
 
   function money(price, currency) {
-    const symbol = currency === "NGN" ? "₦" : (currency || "");
-    return `${symbol}${Number(price).toLocaleString()}`;
+    return window.JWingsDB.formatMoney(price, currency);
+  }
+
+  let buyerCurrency = "NGN";
+  let convertedPriceValue = null; // set once we know the product + rate
+
+  async function resolveBuyerCurrency() {
+    if (!session) return "NGN";
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      return (profile && profile.currency) || "NGN";
+    } catch (err) {
+      return "NGN";
+    }
   }
 
   async function updateCartBadge() {
@@ -178,12 +191,27 @@
       return;
     }
     try {
-      const rows = await window.JWingsDB.select("products", `select=*,vendors(store_name,city,state)&id=eq.${productId}&limit=1`);
+      const [rows, resolvedCurrency] = await Promise.all([
+        window.JWingsDB.select("products", `select=*,vendors(store_name,city,state)&id=eq.${productId}&limit=1`),
+        resolveBuyerCurrency(),
+      ]);
       product = rows[0];
+      buyerCurrency = resolvedCurrency;
+
       if (!product) {
         document.getElementById("content").innerHTML = `<div class="error-state">This product couldn't be found — it may have been removed.</div>`;
         return;
       }
+
+      if (product.currency !== buyerCurrency) {
+        try {
+          const rate = await window.JWingsDB.getExchangeRate(product.currency, buyerCurrency, session ? session.access_token : null);
+          convertedPriceValue = product.price * rate;
+        } catch (err) {
+          convertedPriceValue = null; // fall back to native price display
+        }
+      }
+
       render();
       loadReviews();
     } catch (err) {
@@ -238,8 +266,12 @@
         ? `<div class="stock-note low">Only ${product.stock} left in stock</div>`
         : `<div class="stock-note in">In stock</div>`;
 
+    const showingNative = convertedPriceValue !== null && product.currency !== buyerCurrency;
+    const shownPrice = showingNative ? convertedPriceValue : product.price;
+    const shownCurrency = showingNative ? buyerCurrency : product.currency;
+
     const compareHtml = (product.compare_at_price && product.compare_at_price > product.price)
-      ? `<span class="price-was">${money(product.compare_at_price, product.currency)}</span>` : "";
+      ? `<span class="price-was">${money(showingNative ? product.compare_at_price * (convertedPriceValue / product.price) : product.compare_at_price, shownCurrency)}</span>` : "";
 
     document.getElementById("content").innerHTML = `
       <div class="product-layout">
@@ -248,9 +280,10 @@
           <div class="vendor-tag">${product.vendors ? product.vendors.store_name : "JWings Vendor"}</div>
           <h1 class="product-title">${product.name}</h1>
           <div class="price-row">
-            <span class="price-now">${money(product.price, product.currency)}</span>
+            <span class="price-now">${money(shownPrice, shownCurrency)}</span>
             ${compareHtml}
           </div>
+          ${showingNative ? `<div class="native-price-note">${money(product.price, product.currency)} at the vendor's store · <a href="/customer/profile.html" style="color:var(--navy-700); font-weight:600;">change currency</a></div>` : ""}
           ${product.total_reviews > 0 ? `
             <div class="rating-row">
               <span class="rating-stars">${starString(product.rating)}</span>
