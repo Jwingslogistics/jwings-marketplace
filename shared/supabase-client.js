@@ -275,54 +275,28 @@ async function resendOtp(email, type = "signup") {
 
 // ---- Currency conversion -----------------------------------------------
 //
-// Fetches a live exchange rate and caches it in the fx_rates table for an
-// hour, so repeated conversions (e.g. rendering a product grid) don't hit
-// the external API on every request. Falls back to a stale cached rate
-// (however old) if the live API is unreachable, rather than failing.
+// Delegates to the get-fx-rate edge function, which does the actual
+// fetch-and-cache using the service role key. fx_rates itself is read-only
+// from the client (no insert policy exists) -- letting clients write their
+// own "cached" rate would let anyone insert a fabricated exchange rate and
+// manipulate prices, so all caching happens server-side instead.
 
 async function getExchangeRate(fromCurrency, toCurrency, accessToken = null) {
   if (fromCurrency === toCurrency) return 1;
 
-  // 1. Check for a recent cached rate (within the last hour).
-  try {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const cached = await dbSelect(
-      "fx_rates",
-      `select=rate&base_currency=eq.${fromCurrency}&target_currency=eq.${toCurrency}&fetched_at=gte.${oneHourAgo}&order=fetched_at.desc&limit=1`,
-      accessToken
-    );
-    if (cached.length > 0) return Number(cached[0].rate);
-  } catch (err) {
-    // Fall through to live fetch
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/get-fx-rate`, {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({ from: fromCurrency, to: toCurrency }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Couldn't get an exchange rate for ${fromCurrency} → ${toCurrency}`);
   }
 
-  // 2. Fetch a live rate from a free, no-key-required FX API.
-  try {
-    const res = await fetch(`https://open.er-api.com/v6/latest/${fromCurrency}`);
-    if (!res.ok) throw new Error("FX API unavailable");
-    const data = await res.json();
-    const rate = data.rates && data.rates[toCurrency];
-    if (!rate) throw new Error(`No rate found for ${toCurrency}`);
-
-    // Cache it for next time (best-effort — don't fail the conversion if this fails).
-    dbInsert("fx_rates", {
-      base_currency: fromCurrency, target_currency: toCurrency, rate,
-    }, accessToken).catch(() => {});
-
-    return rate;
-  } catch (err) {
-    // 3. Live fetch failed — fall back to ANY cached rate, however old.
-    try {
-      const stale = await dbSelect(
-        "fx_rates",
-        `select=rate&base_currency=eq.${fromCurrency}&target_currency=eq.${toCurrency}&order=fetched_at.desc&limit=1`,
-        accessToken
-      );
-      if (stale.length > 0) return Number(stale[0].rate);
-    } catch (e) { /* no cache either */ }
-
-    throw new Error(`Couldn't get an exchange rate for ${fromCurrency} → ${toCurrency}`);
-  }
+  const data = await res.json();
+  return Number(data.rate);
 }
 
 const CURRENCY_SYMBOLS = { NGN: "₦", USD: "$", GBP: "£", EUR: "€", GHS: "₵", KES: "KSh", ZAR: "R" };
