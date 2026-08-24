@@ -152,6 +152,14 @@
 
   /* ---- Footer ---- */
   footer { background: var(--navy-900); color: rgba(255,255,255,0.7); padding: 48px 6vw 28px; }
+
+  /* ---- WhatsApp floating button ---- */
+  .whatsapp-float {
+    position: fixed; bottom: 24px; right: 24px; background: #25D366; width: 56px; height: 56px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 1000; transition: transform 0.2s ease;
+  }
+  .whatsapp-float:hover { transform: scale(1.08); }
   .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 32px; max-width: 1100px; margin: 0 auto 32px; }
   @media (max-width: 700px) { .footer-grid { grid-template-columns: 1fr; } }
   .footer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -291,12 +299,19 @@
       <h4>Contact</h4>
       <div class="flinks">
         <a href="mailto:hello@jwingslogistics.com">hello@jwingslogistics.com</a>
+        <a href="https://wa.me/2348107980542" target="_blank" rel="noopener">WhatsApp: +234 810 798 0542</a>
         <a href="#">Akure, Ondo State, Nigeria</a>
       </div>
     </div>
   </div>
   <div class="footer-bottom">© 2026 JWings Logistics. All rights reserved.</div>
 </footer>
+
+<a href="https://wa.me/2348107980542" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Chat with us on WhatsApp">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="#fff">
+    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.48 1.32 5L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0012.04 2m0 1.67c2.2 0 4.27.86 5.82 2.42a8.19 8.19 0 012.42 5.82c0 4.54-3.7 8.23-8.24 8.23-1.48 0-2.93-.39-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 01-1.26-4.37c0-4.54 3.7-8.24 8.24-8.24m-4.75 4.6c-.16 0-.43.06-.66.31-.22.25-.86.84-.86 2.04 0 1.2.88 2.36 1 2.53.13.16 1.7 2.71 4.19 3.7.58.25 1.04.4 1.4.51.59.19 1.12.16 1.55.1.47-.07 1.45-.59 1.65-1.16.21-.57.21-1.06.15-1.16-.06-.1-.23-.16-.48-.28-.26-.13-1.5-.74-1.73-.82-.23-.09-.4-.13-.57.13-.16.25-.65.82-.8.99-.15.16-.29.19-.55.06-.26-.13-1.09-.4-2.08-1.28-.77-.68-1.29-1.53-1.44-1.79-.15-.25-.02-.39.11-.52.12-.12.26-.31.4-.46.13-.16.17-.27.26-.45.09-.19.04-.35-.02-.48-.06-.13-.57-1.42-.79-1.94-.21-.51-.42-.44-.57-.45h-.5z"/>
+  </svg>
+</a>
 
 <script src="/shared/supabase-client.js"></script>
 <script>
