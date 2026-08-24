@@ -203,7 +203,8 @@
   let allCategories = [];
   let allProducts = [];
   let activeSlug = "";
-  let searchTerm = "";
+  let searchTerm = new URLSearchParams(window.location.search).get("q") || "";
+  document.getElementById("searchInput").value = searchTerm;
   let sortMode = "newest";
   let buyerCurrency = "NGN";
   const rateCache = {}; // "FROM_TO" -> rate, populated once per page load
