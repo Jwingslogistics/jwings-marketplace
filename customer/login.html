@@ -109,10 +109,16 @@
       const result = await window.JWingsDB.signIn(identifier, password);
       window.JWingsDB.saveSession(result);
 
-      // If the person was sent here from a specific page (e.g. Book a Delivery),
-      // return them there instead of always routing by account role.
+      // Return the person to wherever they were trying to go before being
+      // asked to log in — e.g. they clicked "Add to cart" on a product,
+      // or "Book a delivery" while signed out. Two ways this gets passed:
+      // 1) an explicit ?redirect= URL param (used by pages that link straight here)
+      // 2) sessionStorage (used by pages like product.html/cart.html that
+      //    redirect programmatically from a button click)
       const params = new URLSearchParams(window.location.search);
-      const redirectTo = params.get("redirect");
+      const redirectTo = params.get("redirect") || sessionStorage.getItem("jwings_redirect_after_login");
+      sessionStorage.removeItem("jwings_redirect_after_login");
+
       if (redirectTo) {
         window.location.href = redirectTo;
         return;

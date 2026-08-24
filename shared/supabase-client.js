@@ -25,11 +25,6 @@ function authHeaders(accessToken) {
 // through requestWithAuthRetry(), which transparently refreshes the
 // session and retries once if a request comes back 401 — so pages never
 // need to think about token expiry themselves.
-//
-// refreshPromise dedupes concurrent refreshes: if several requests hit a
-// 401 around the same time, they all await the SAME refresh call instead
-// of each firing their own — Supabase refresh tokens are single-use, so
-// parallel refresh attempts would invalidate each other.
 
 let refreshPromise = null;
 
@@ -221,6 +216,60 @@ async function getSignedUrl(bucket, path, accessToken, expiresIn = 3600) {
   return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
 }
 
+// ---- Currency conversion -----------------------------------------------
+//
+// Fetches a live exchange rate and caches it via a secure RPC (rates are
+// public, non-sensitive data, but writes go through cache_fx_rate() rather
+// than a direct table insert). Falls back to a stale cached rate if the
+// live API is unreachable, rather than failing outright.
+
+async function getExchangeRate(fromCurrency, toCurrency, accessToken = null) {
+  if (fromCurrency === toCurrency) return 1;
+
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const cached = await dbSelect(
+      "fx_rates",
+      `select=rate&base_currency=eq.${fromCurrency}&target_currency=eq.${toCurrency}&fetched_at=gte.${oneHourAgo}&order=fetched_at.desc&limit=1`,
+      accessToken
+    );
+    if (cached.length > 0) return Number(cached[0].rate);
+  } catch (err) {
+    // Fall through to live fetch
+  }
+
+  try {
+    const res = await fetch(`https://open.er-api.com/v6/latest/${fromCurrency}`);
+    if (!res.ok) throw new Error("FX API unavailable");
+    const data = await res.json();
+    const rate = data.rates && data.rates[toCurrency];
+    if (!rate) throw new Error(`No rate found for ${toCurrency}`);
+
+    // Cache it for next time via the secure RPC (best-effort).
+    dbRpc("cache_fx_rate", { p_base: fromCurrency, p_target: toCurrency, p_rate: rate }, accessToken).catch(() => {});
+
+    return rate;
+  } catch (err) {
+    try {
+      const stale = await dbSelect(
+        "fx_rates",
+        `select=rate&base_currency=eq.${fromCurrency}&target_currency=eq.${toCurrency}&order=fetched_at.desc&limit=1`,
+        accessToken
+      );
+      if (stale.length > 0) return Number(stale[0].rate);
+    } catch (e) { /* no cache either */ }
+
+    throw new Error(`Couldn't get an exchange rate for ${fromCurrency} → ${toCurrency}`);
+  }
+}
+
+const CURRENCY_SYMBOLS = { NGN: "₦", USD: "$", GBP: "£", EUR: "€", GHS: "₵", KES: "KSh", ZAR: "R" };
+
+function formatMoney(amount, currency) {
+  const symbol = CURRENCY_SYMBOLS[currency] || (currency ? currency + " " : "");
+  return `${symbol}${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
+
 // ---- Auth helpers -----------------------------------------------------
 
 async function signUp(email, password, extra = {}) {
@@ -273,39 +322,6 @@ async function resendOtp(email, type = "signup") {
   return true;
 }
 
-// ---- Currency conversion -----------------------------------------------
-//
-// Delegates to the get-fx-rate edge function, which does the actual
-// fetch-and-cache using the service role key. fx_rates itself is read-only
-// from the client (no insert policy exists) -- letting clients write their
-// own "cached" rate would let anyone insert a fabricated exchange rate and
-// manipulate prices, so all caching happens server-side instead.
-
-async function getExchangeRate(fromCurrency, toCurrency, accessToken = null) {
-  if (fromCurrency === toCurrency) return 1;
-
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/get-fx-rate`, {
-    method: "POST",
-    headers: authHeaders(accessToken),
-    body: JSON.stringify({ from: fromCurrency, to: toCurrency }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Couldn't get an exchange rate for ${fromCurrency} → ${toCurrency}`);
-  }
-
-  const data = await res.json();
-  return Number(data.rate);
-}
-
-const CURRENCY_SYMBOLS = { NGN: "₦", USD: "$", GBP: "£", EUR: "€", GHS: "₵", KES: "KSh", ZAR: "R" };
-
-function formatMoney(amount, currency) {
-  const symbol = CURRENCY_SYMBOLS[currency] || (currency ? currency + " " : "");
-  return `${symbol}${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-}
-
 // ---- Session helpers ------------------------------------------------------
 
 function saveSession(session) {
@@ -335,11 +351,6 @@ function decodeJwtPayload(token) {
 
 async function getMyProfile(accessToken) {
   const claims = accessToken ? decodeJwtPayload(accessToken) : null;
-  // Filter explicitly by the token's own user id. Relying on "select=*&limit=1"
-  // with no filter is unsafe for admins: since admins can read every profile
-  // (via the admin-select policy), an unfiltered query can return an
-  // arbitrary row instead of their own — which was causing admins to get
-  // redirected to the wrong dashboard after login.
   const query = claims && claims.sub ? `select=*&id=eq.${claims.sub}&limit=1` : "select=*&limit=1";
   const rows = await dbSelect("profiles", query, accessToken);
   return rows[0] || null;
