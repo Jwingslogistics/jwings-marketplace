@@ -45,6 +45,9 @@
     width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px;
     font-size: 14px; font-family: var(--font-body);
   }
+  .field .geo-status { font-size: 11.5px; color: var(--muted); margin-top: 5px; min-height: 14px; }
+  .field .geo-status.ok { color: var(--success); }
+  .field .geo-status.err { color: var(--danger); }
 
   .delivery-options { display: flex; flex-direction: column; gap: 10px; }
   .delivery-option {
@@ -114,6 +117,7 @@
         <div class="field">
           <label for="state">State</label>
           <input type="text" id="state" placeholder="e.g. Ondo" required />
+          <div class="geo-status" id="addressGeoStatus"></div>
         </div>
         <div class="field">
           <label for="orderNotes">Order notes (optional)</label>
@@ -124,23 +128,20 @@
       <div class="panel">
         <h3>Delivery speed</h3>
         <div class="delivery-options" id="deliveryOptions">
-          <label class="delivery-option selected" data-fee="1500">
+          <label class="delivery-option selected">
             <span class="left"><input type="radio" name="deliveryType" value="standard" checked />
               <span><span class="label">Standard</span><br/><span class="sub">2–3 business days</span></span>
             </span>
-            <span class="fee" data-fee-display>₦1,500</span>
           </label>
-          <label class="delivery-option" data-fee="2500">
+          <label class="delivery-option">
             <span class="left"><input type="radio" name="deliveryType" value="express" />
               <span><span class="label">Express</span><br/><span class="sub">Next-day delivery</span></span>
             </span>
-            <span class="fee" data-fee-display>₦2,500</span>
           </label>
-          <label class="delivery-option" data-fee="4000">
+          <label class="delivery-option">
             <span class="left"><input type="radio" name="deliveryType" value="same_day" />
               <span><span class="label">Same-day</span><br/><span class="sub">Delivered today</span></span>
             </span>
-            <span class="fee" data-fee-display>₦4,000</span>
           </label>
         </div>
       </div>
@@ -151,7 +152,8 @@
       <div id="miniItems"></div>
       <div class="divider"></div>
       <div class="summary-row"><span>Subtotal</span><span id="sumSubtotal">₦0</span></div>
-      <div class="summary-row"><span>Delivery fee</span><span id="sumDelivery">₦1,500</span></div>
+      <div class="summary-row"><span>Distance</span><span id="sumDistance">—</span></div>
+      <div class="summary-row"><span>Delivery fee</span><span id="sumDelivery">Enter your address</span></div>
       <div class="summary-row"><span>Service fee</span><span id="sumService">₦500</span></div>
       <div class="summary-row total"><span>Total</span><span id="sumTotal">₦0</span></div>
       <button class="place-order-btn" id="placeOrderBtn">Place order</button>
@@ -169,10 +171,86 @@
 
   const session = window.JWingsDB.getSession();
   if (!session) window.location.href = "/customer/login.html";
+<script>
+  // Fees are always computed in NGN internally, then converted to the
+  // buyer's chosen currency below so everything on the order is one
+  // consistent currency. The distance-based fee is estimated here for
+  // display only -- the authoritative fee is computed server-side by a
+  // database trigger from the coordinates we send, so it can't be
+  // spoofed by editing anything in this page.
+  const SERVICE_FEE_NGN = 500;
+  let selectedDeliveryType = "standard";
+  let deliveryAddressCoords = null; // { lat, lng }
+
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html";
 
   function money(amount, currency) {
     return window.JWingsDB.formatMoney(amount, currency);
   }
+
+  function haversineKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function estimateFeeNGN(distanceKm, deliveryType) {
+    const multiplier = deliveryType === "express" ? 1.5 : deliveryType === "same_day" ? 2 : 1;
+    return Math.round((700 + 100 * distanceKm) * multiplier);
+  }
+
+  // Farthest vendor in the cart determines the fee (covers the worst-case
+  // leg for multi-vendor orders), matching the server-side trigger logic.
+  function farthestVendorDistanceKm() {
+    const vendorsWithCoords = cart
+      .map(i => ({ lat: i.vendor_lat, lng: i.vendor_lng }))
+      .filter(v => v.lat != null && v.lng != null);
+    if (vendorsWithCoords.length === 0 || !deliveryAddressCoords) return null;
+    return Math.max(...vendorsWithCoords.map(v =>
+      haversineKm(v.lat, v.lng, deliveryAddressCoords.lat, deliveryAddressCoords.lng)
+    ));
+  }
+
+  async function geocodeDeliveryAddress() {
+    const status = document.getElementById("addressGeoStatus");
+    const fullAddress = document.getElementById("fullAddress").value.trim();
+    const city = document.getElementById("city").value.trim();
+    const state = document.getElementById("state").value.trim();
+    if (!fullAddress || !city || !state) { deliveryAddressCoords = null; status.textContent = ""; renderSummary(); return; }
+
+    status.textContent = "Locating address...";
+    status.className = "geo-status";
+    try {
+      const res = await fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/geocode-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g" },
+        body: JSON.stringify({ address: `${fullAddress}, ${city}, ${state}` }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Couldn't locate that address");
+      deliveryAddressCoords = { lat: data.latitude, lng: data.longitude };
+      status.textContent = "✓ Address located";
+      status.className = "geo-status ok";
+    } catch (err) {
+      deliveryAddressCoords = null;
+      status.textContent = "Couldn't locate this address — check spelling or add more detail.";
+      status.className = "geo-status err";
+    }
+    renderSummary();
+  }
+
+  let geoDebounce = null;
+  ["fullAddress", "city", "state"].forEach(id => {
+    document.getElementById(id).addEventListener("input", () => {
+      clearTimeout(geoDebounce);
+      geoDebounce = setTimeout(geocodeDeliveryAddress, 1200);
+    });
+    document.getElementById(id).addEventListener("blur", geocodeDeliveryAddress);
+  });
 
   let cart = [];
   let buyerCurrency = "NGN";
@@ -199,7 +277,7 @@
 
       const rows = await window.JWingsDB.select(
         "cart_items",
-        `select=*,products(id,name,price,currency,stock,vendor_id,vendors(store_name,city,state))&customer_id=eq.${session.user.id}`,
+        `select=*,products(id,name,price,currency,stock,vendor_id,vendors(store_name,city,state,latitude,longitude))&customer_id=eq.${session.user.id}`,
         session.access_token
       );
       cart = rows.filter(r => r.products).map(r => ({
@@ -212,6 +290,8 @@
         vendor_name: r.products.vendors ? r.products.vendors.store_name : "JWings Vendor",
         vendor_city: r.products.vendors ? r.products.vendors.city : null,
         vendor_state: r.products.vendors ? r.products.vendors.state : null,
+        vendor_lat: r.products.vendors ? r.products.vendors.latitude : null,
+        vendor_lng: r.products.vendors ? r.products.vendors.longitude : null,
         quantity: r.quantity,
         stock: r.products.stock,
       }));
@@ -245,11 +325,18 @@
     return item.price * rate;
   }
 
+  function currentEstimatedFeeBuyer() {
+    const distance = farthestVendorDistanceKm();
+    if (distance === null) return null;
+    return estimateFeeNGN(distance, selectedDeliveryType) * ngnToBuyerRate;
+  }
+
   function renderSummary() {
     const subtotal = cart.reduce((sum, i) => sum + itemUnitPriceBuyer(i) * i.quantity, 0);
-    const deliveryFeeBuyer = selectedFeeNGN * ngnToBuyerRate;
+    const distance = farthestVendorDistanceKm();
+    const deliveryFeeBuyer = currentEstimatedFeeBuyer();
     const serviceFeeBuyer = SERVICE_FEE_NGN * ngnToBuyerRate;
-    const total = subtotal + deliveryFeeBuyer + serviceFeeBuyer;
+    const total = subtotal + (deliveryFeeBuyer || 0) + serviceFeeBuyer;
 
     document.getElementById("miniItems").innerHTML = cart.map(i => `
       <div class="mini-item">
@@ -258,14 +345,10 @@
       </div>`).join("");
 
     document.getElementById("sumSubtotal").textContent = money(subtotal, buyerCurrency);
-    document.getElementById("sumDelivery").textContent = money(deliveryFeeBuyer, buyerCurrency);
+    document.getElementById("sumDistance").textContent = distance !== null ? `${distance.toFixed(1)} km` : "—";
+    document.getElementById("sumDelivery").textContent = deliveryFeeBuyer !== null ? money(deliveryFeeBuyer, buyerCurrency) : "Enter your address";
     document.getElementById("sumService").textContent = money(serviceFeeBuyer, buyerCurrency);
     document.getElementById("sumTotal").textContent = money(total, buyerCurrency);
-
-    document.querySelectorAll(".delivery-option").forEach((el) => {
-      const feeNGN = parseInt(el.getAttribute("data-fee"), 10);
-      el.querySelector("[data-fee-display]").textContent = money(feeNGN * ngnToBuyerRate, buyerCurrency);
-    });
   }
 
   document.querySelectorAll(".delivery-option").forEach((el) => {
@@ -273,7 +356,6 @@
       document.querySelectorAll(".delivery-option").forEach(o => o.classList.remove("selected"));
       el.classList.add("selected");
       el.querySelector("input").checked = true;
-      selectedFeeNGN = parseInt(el.getAttribute("data-fee"), 10);
       selectedDeliveryType = el.querySelector("input").value;
       renderSummary();
     });
@@ -294,6 +376,10 @@
       showError("Please fill in your full delivery address, city, and state.");
       return;
     }
+    if (!deliveryAddressCoords) {
+      showError("We couldn't locate your delivery address. Please check it and wait for the green checkmark before placing your order.");
+      return;
+    }
 
     const btn = document.getElementById("placeOrderBtn");
     btn.disabled = true;
@@ -302,22 +388,27 @@
     try {
       const profile = await window.JWingsDB.getMyProfile(session.access_token);
       const subtotal = cart.reduce((sum, i) => sum + itemUnitPriceBuyer(i) * i.quantity, 0);
-      const deliveryFeeBuyer = selectedFeeNGN * ngnToBuyerRate;
+      const deliveryFeeBuyer = currentEstimatedFeeBuyer() || (estimateFeeNGN(0, selectedDeliveryType) * ngnToBuyerRate);
       const serviceFeeBuyer = SERVICE_FEE_NGN * ngnToBuyerRate;
       const total = subtotal + deliveryFeeBuyer + serviceFeeBuyer;
       const orderNumber = "JW" + Date.now().toString().slice(-8);
 
-      // Save the delivery address for this order.
+      // Save the delivery address for this order, including coordinates
+      // so the server-side fee trigger can use them.
       const addresses = await window.JWingsDB.insert("addresses", {
         user_id: profile.id,
         label: "Delivery",
         full_address: fullAddress,
         city, state,
+        latitude: deliveryAddressCoords.lat,
+        longitude: deliveryAddressCoords.lng,
         is_default: false,
       }, session.access_token);
       const address = addresses[0];
 
       // Create the order — everything stored in the buyer's chosen currency.
+      // delivery_fee here is an estimate; a database trigger recomputes the
+      // authoritative value once order_items are inserted below.
       const orders = await window.JWingsDB.insert("orders", {
         order_number: orderNumber,
         customer_id: profile.id,
@@ -333,7 +424,8 @@
       const order = orders[0];
 
       // Create one order_item per cart line, with both native and
-      // buyer-currency amounts recorded.
+      // buyer-currency amounts recorded. Inserting these triggers the
+      // server-side recalculation of orders.delivery_fee.
       for (const item of cart) {
         const unitPriceBuyer = itemUnitPriceBuyer(item);
         await window.JWingsDB.insert("order_items", {
@@ -350,10 +442,12 @@
         }, session.access_token);
       }
 
-      // Create a trackable shipment for each vendor represented in this order.
+      // Create a trackable shipment for each vendor represented in this
+      // order, with real pickup/drop-off coordinates so each shipment's
+      // own delivery_fee is calculated from its actual distance.
       const uniqueVendorIds = [...new Set(cart.map(i => i.vendor_id))];
       const vendors = await window.JWingsDB.select(
-        "vendors", `select=id,store_name,city,state&id=in.(${uniqueVendorIds.join(",")})`, session.access_token
+        "vendors", `select=id,store_name,city,state,latitude,longitude&id=in.(${uniqueVendorIds.join(",")})`, session.access_token
       );
 
       function generateTrackingId() {
@@ -372,13 +466,17 @@
           order_id: order.id,
           sender_id: profile.id,
           pickup_address: vendor ? `${vendor.store_name}, ${vendor.city || ""}${vendor.state ? ", " + vendor.state : ""}` : "Vendor location",
+          pickup_lat: vendor ? vendor.latitude : null,
+          pickup_lng: vendor ? vendor.longitude : null,
           dropoff_address: `${fullAddress}, ${city}, ${state}`,
+          dropoff_lat: deliveryAddressCoords.lat,
+          dropoff_lng: deliveryAddressCoords.lng,
           recipient_name: profile.full_name,
           recipient_phone: profile.phone || "",
           package_type: "parcel",
           package_weight_kg: 1,
           delivery_type: selectedDeliveryType,
-          delivery_fee: deliveryFeeBuyer,
+          delivery_fee: deliveryFeeBuyer, // overwritten server-side by trigger if coords are present
           currency: buyerCurrency,
           payment_status: "unpaid",
           status: "order_received",

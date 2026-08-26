@@ -78,6 +78,9 @@
   .save-note.show { display: inline; }
   .err-note { font-size: 12.5px; color: var(--danger); margin-top: 10px; display: none; }
   .err-note.show { display: block; }
+  .geo-status { font-size: 11.5px; color: var(--muted); margin-top: 5px; min-height: 14px; }
+  .geo-status.ok { color: var(--success); }
+  .geo-status.err { color: var(--danger); }
 
   .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .toggle-row:last-child { border-bottom: none; }
@@ -184,6 +187,12 @@
         <div class="field">
           <label for="storeDescription">Store description</label>
           <textarea id="storeDescription" placeholder="Tell customers what your store offers..."></textarea>
+        </div>
+        <div class="field">
+          <label for="storeAddress">Pickup address</label>
+          <input type="text" id="storeAddress" placeholder="Full street address for pickup" />
+          <div class="hint">Used to calculate delivery distance and fees to your customers.</div>
+          <div class="geo-status" id="storeAddressGeoStatus"></div>
         </div>
         <div class="row-2">
           <div class="field">
@@ -334,6 +343,7 @@
     if (myVendor) {
       document.getElementById("storeName").value = myVendor.store_name || "";
       document.getElementById("storeDescription").value = myVendor.description || "";
+      document.getElementById("storeAddress").value = myVendor.address || "";
       document.getElementById("storeCity").value = myVendor.city || "";
       document.getElementById("storeState").value = myVendor.state || "";
       document.getElementById("bankName").value = myVendor.bank_name || "";
@@ -364,6 +374,29 @@
     }
   });
 
+  async function geocodeStoreAddress(fullAddress) {
+    const status = document.getElementById("storeAddressGeoStatus");
+    if (!fullAddress || fullAddress.length < 5) { status.textContent = ""; return null; }
+    status.textContent = "Locating address...";
+    status.className = "geo-status";
+    try {
+      const res = await fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/geocode-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g" },
+        body: JSON.stringify({ address: fullAddress }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Couldn't locate that address");
+      status.textContent = "✓ Address located";
+      status.className = "geo-status ok";
+      return { lat: data.latitude, lng: data.longitude };
+    } catch (err) {
+      status.textContent = "Couldn't locate this address — delivery fees to your store may not calculate correctly until it's fixed.";
+      status.className = "geo-status err";
+      return null;
+    }
+  }
+
   document.getElementById("storeForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!myVendor) { alert("Store profile not found."); return; }
@@ -373,12 +406,23 @@
     btn.textContent = "Saving...";
     note.classList.remove("show");
     try {
-      await window.JWingsDB.update("vendors", `id=eq.${myVendor.id}`, {
+      const storeAddress = document.getElementById("storeAddress").value.trim();
+      const city = document.getElementById("storeCity").value.trim();
+      const state = document.getElementById("storeState").value.trim();
+
+      const payload = {
         store_name: document.getElementById("storeName").value.trim(),
         description: document.getElementById("storeDescription").value.trim(),
-        city: document.getElementById("storeCity").value.trim(),
-        state: document.getElementById("storeState").value.trim(),
-      }, session.access_token);
+        address: storeAddress,
+        city, state,
+      };
+
+      if (storeAddress) {
+        const coords = await geocodeStoreAddress(`${storeAddress}, ${city}, ${state}`);
+        if (coords) { payload.latitude = coords.lat; payload.longitude = coords.lng; }
+      }
+
+      await window.JWingsDB.update("vendors", `id=eq.${myVendor.id}`, payload, session.access_token);
       note.classList.add("show");
       setTimeout(() => note.classList.remove("show"), 2500);
     } catch (err) {

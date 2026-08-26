@@ -79,6 +79,9 @@
   .save-note.show { display: inline; }
   .err-note { font-size: 12.5px; color: var(--danger); margin-top: 10px; display: none; }
   .err-note.show { display: block; }
+  .geo-status { font-size: 11.5px; color: var(--muted); min-height: 14px; }
+  .geo-status.ok { color: var(--success); }
+  .geo-status.err { color: var(--danger); }
 
   .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .toggle-row:last-child { border-bottom: none; }
@@ -293,6 +296,7 @@
         <input type="text" id="addrState" required />
       </div>
     </div>
+    <div class="geo-status" id="addrGeoStatus" style="margin-bottom:14px;"></div>
     <div class="modal-actions">
       <button class="modal-cancel" id="addrCancelBtn" type="button">Cancel</button>
       <button class="modal-submit" id="addrSaveBtn" type="button">Save address</button>
@@ -568,6 +572,28 @@
     document.getElementById("addressModal").classList.remove("show");
   });
 
+  async function geocodeAddress(fullAddress) {
+    const status = document.getElementById("addrGeoStatus");
+    status.textContent = "Locating address...";
+    status.className = "geo-status";
+    try {
+      const res = await fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/geocode-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g" },
+        body: JSON.stringify({ address: fullAddress }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Couldn't locate that address");
+      status.textContent = "✓ Address located";
+      status.className = "geo-status ok";
+      return { lat: data.latitude, lng: data.longitude };
+    } catch (err) {
+      status.textContent = "Saved, but couldn't pinpoint this address for delivery fee estimates.";
+      status.className = "geo-status err";
+      return null;
+    }
+  }
+
   document.getElementById("addrSaveBtn").addEventListener("click", async () => {
     const fullAddress = document.getElementById("addrFull").value.trim();
     const city = document.getElementById("addrCity").value.trim();
@@ -584,14 +610,14 @@
     btn.textContent = "Saving...";
 
     try {
+      const coords = await geocodeAddress(`${fullAddress}, ${city}, ${state}`);
+      const payload = { label, full_address: fullAddress, city, state };
+      if (coords) { payload.latitude = coords.lat; payload.longitude = coords.lng; }
+
       if (editingAddressId) {
-        await window.JWingsDB.update("addresses", `id=eq.${editingAddressId}`, {
-          label, full_address: fullAddress, city, state,
-        }, session.access_token);
+        await window.JWingsDB.update("addresses", `id=eq.${editingAddressId}`, payload, session.access_token);
       } else {
-        await window.JWingsDB.insert("addresses", {
-          user_id: myProfile.id, label, full_address: fullAddress, city, state, is_default: false,
-        }, session.access_token);
+        await window.JWingsDB.insert("addresses", { ...payload, user_id: myProfile.id, is_default: false }, session.access_token);
       }
       document.getElementById("addressModal").classList.remove("show");
       await loadAddresses();
