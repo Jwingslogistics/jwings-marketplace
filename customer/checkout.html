@@ -163,15 +163,6 @@
 
 <script src="/shared/supabase-client.js"></script>
 <script>
-  // Fees are always defined internally in NGN; converted to the buyer's
-  // chosen currency below so everything on the order is one consistent currency.
-  const SERVICE_FEE_NGN = 500;
-  let selectedFeeNGN = 1500;
-  let selectedDeliveryType = "standard";
-
-  const session = window.JWingsDB.getSession();
-  if (!session) window.location.href = "/customer/login.html";
-<script>
   // Fees are always computed in NGN internally, then converted to the
   // buyer's chosen currency below so everything on the order is one
   // consistent currency. The distance-based fee is estimated here for
