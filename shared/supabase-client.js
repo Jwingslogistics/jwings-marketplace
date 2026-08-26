@@ -25,6 +25,11 @@ function authHeaders(accessToken) {
 // through requestWithAuthRetry(), which transparently refreshes the
 // session and retries once if a request comes back 401 — so pages never
 // need to think about token expiry themselves.
+//
+// refreshPromise dedupes concurrent refreshes: if several requests hit a
+// 401 around the same time, they all await the SAME refresh call instead
+// of each firing their own — Supabase refresh tokens are single-use, so
+// parallel refresh attempts would invalidate each other.
 
 let refreshPromise = null;
 
@@ -134,9 +139,9 @@ async function dbDelete(table, query, accessToken = null) {
 }
 
 // Calls a Postgres function exposed via PostgREST (e.g. track_shipment,
-// request_vendor_withdrawal). plpgsql `raise exception` messages come
-// through as a `message` field in the error body, surfaced here so
-// callers can show it directly.
+// request_vendor_withdrawal, deactivate_own_account). plpgsql `raise
+// exception` messages come through as a `message` field in the error
+// body, surfaced here so callers can show it directly.
 async function dbRpc(fnName, args = {}, accessToken = null) {
   const res = await requestWithAuthRetry(
     (token) => ({
@@ -164,6 +169,7 @@ async function uploadFile(bucket, path, file, accessToken) {
           "apikey": SUPABASE_ANON_KEY,
           "Authorization": `Bearer ${token || SUPABASE_ANON_KEY}`,
           "Content-Type": file.type || "application/octet-stream",
+          "x-upsert": "true",
         },
         body: file,
       },
@@ -214,40 +220,6 @@ async function getSignedUrl(bucket, path, accessToken, expiresIn = 3600) {
   if (!res.ok) throw new Error(`Couldn't generate a viewable link: ${res.status}`);
   const data = await res.json();
   return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
-}
-
-// ---- Currency conversion -----------------------------------------------
-//
-// Delegates to the get-fx-rate edge function, which does the actual
-// fetch-and-cache using the service role key. fx_rates itself is read-only
-// from the client (no working insert path exists) -- letting clients
-// determine their own "cached" rate (even via an RPC wrapper) would let
-// anyone submit a fabricated exchange rate and manipulate prices, so all
-// caching happens server-side instead.
-
-async function getExchangeRate(fromCurrency, toCurrency, accessToken = null) {
-  if (fromCurrency === toCurrency) return 1;
-
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/get-fx-rate`, {
-    method: "POST",
-    headers: authHeaders(accessToken),
-    body: JSON.stringify({ from: fromCurrency, to: toCurrency }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Couldn't get an exchange rate for ${fromCurrency} → ${toCurrency}`);
-  }
-
-  const data = await res.json();
-  return Number(data.rate);
-}
-
-const CURRENCY_SYMBOLS = { NGN: "₦", USD: "$", GBP: "£", EUR: "€", GHS: "₵", KES: "KSh", ZAR: "R" };
-
-function formatMoney(amount, currency) {
-  const symbol = CURRENCY_SYMBOLS[currency] || (currency ? currency + " " : "");
-  return `${symbol}${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
 // ---- Auth helpers -----------------------------------------------------
@@ -302,6 +274,63 @@ async function resendOtp(email, type = "signup") {
   return true;
 }
 
+// Changes the signed-in user's password via Supabase Auth's own /user
+// endpoint (not a table — this is Auth, not PostgREST). Supabase requires
+// the caller to already hold a valid access token; there's no separate
+// "confirm current password" step here, so pages should ask the user to
+// re-enter it and treat a wrong one as an auth failure elsewhere if needed.
+async function updatePassword(newPassword, accessToken) {
+  const res = await requestWithAuthRetry(
+    (token) => ({
+      url: `${SUPABASE_URL}/auth/v1/user`,
+      options: {
+        method: "PUT",
+        headers: authHeaders(token),
+        body: JSON.stringify({ password: newPassword }),
+      },
+    }),
+    accessToken
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.msg || err.error_description || `Couldn't update password: ${res.status}`);
+  }
+  return res.json();
+}
+
+// ---- Currency conversion -----------------------------------------------
+//
+// Delegates to the get-fx-rate edge function, which does the actual
+// fetch-and-cache using the service role key. fx_rates itself is read-only
+// from the client (no insert policy exists) -- letting clients write their
+// own "cached" rate would let anyone insert a fabricated exchange rate and
+// manipulate prices, so all caching happens server-side instead.
+
+async function getExchangeRate(fromCurrency, toCurrency, accessToken = null) {
+  if (fromCurrency === toCurrency) return 1;
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/get-fx-rate`, {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({ from: fromCurrency, to: toCurrency }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Couldn't get an exchange rate for ${fromCurrency} → ${toCurrency}`);
+  }
+
+  const data = await res.json();
+  return Number(data.rate);
+}
+
+const CURRENCY_SYMBOLS = { NGN: "₦", USD: "$", GBP: "£", EUR: "€", GHS: "₵", KES: "KSh", ZAR: "R" };
+
+function formatMoney(amount, currency) {
+  const symbol = CURRENCY_SYMBOLS[currency] || (currency ? currency + " " : "");
+  return `${symbol}${Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
+
 // ---- Session helpers ------------------------------------------------------
 
 function saveSession(session) {
@@ -331,6 +360,11 @@ function decodeJwtPayload(token) {
 
 async function getMyProfile(accessToken) {
   const claims = accessToken ? decodeJwtPayload(accessToken) : null;
+  // Filter explicitly by the token's own user id. Relying on "select=*&limit=1"
+  // with no filter is unsafe for admins: since admins can read every profile
+  // (via the admin-select policy), an unfiltered query can return an
+  // arbitrary row instead of their own — which was causing admins to get
+  // redirected to the wrong dashboard after login.
   const query = claims && claims.sub ? `select=*&id=eq.${claims.sub}&limit=1` : "select=*&limit=1";
   const rows = await dbSelect("profiles", query, accessToken);
   return rows[0] || null;
@@ -362,6 +396,7 @@ window.JWingsDB = {
   signUp,
   signIn,
   signOut,
+  updatePassword,
   verifyOtp,
   resendOtp,
   saveSession,
