@@ -224,7 +224,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Couldn't locate that address");
       deliveryAddressCoords = { lat: data.latitude, lng: data.longitude };
-      status.textContent = "✓ Address located";
+      status.textContent = data.approximate ? "✓ Approximate location used (exact address not found)" : "✓ Address located";
       status.className = "geo-status ok";
     } catch (err) {
       deliveryAddressCoords = null;

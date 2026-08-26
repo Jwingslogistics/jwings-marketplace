@@ -584,7 +584,7 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Couldn't locate that address");
-      status.textContent = "✓ Address located";
+      status.textContent = data.approximate ? "✓ Approximate location used (exact address not found)" : "✓ Address located";
       status.className = "geo-status ok";
       return { lat: data.latitude, lng: data.longitude };
     } catch (err) {
