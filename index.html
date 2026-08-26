@@ -160,10 +160,13 @@
   .section-footer-link a { color: var(--navy-700); font-weight: 700; font-size: 14px; text-decoration: none; }
   .section-footer-link a:hover { text-decoration: underline; }
 
-  .stats-bar { background: var(--navy-900); padding: 40px 5vw; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center; }
-  @media (max-width: 720px) { .stats-bar { grid-template-columns: repeat(2, 1fr); } }
-  .stats-bar .stat strong { display: block; font-family: var(--font-display); color: var(--white); font-size: 28px; font-weight: 600; }
-  .stats-bar .stat span { color: rgba(255,255,255,0.6); font-size: 12px; letter-spacing: 0.3px; }
+  .whatsapp-fab {
+    position: fixed; bottom: 24px; right: 24px; z-index: 60;
+    width: 56px; height: 56px; border-radius: 50%; background: #25D366;
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+    box-shadow: 0 10px 24px -6px rgba(37,211,102,0.6); text-decoration: none;
+  }
+  .whatsapp-fab:hover { background: #20bd5a; }
 
   .vendor-cta {
     margin: 56px 5vw; background: linear-gradient(135deg, var(--gold-500), #f0b74d);
@@ -312,12 +315,7 @@
   </div>
 </section>
 
-<div class="stats-bar" id="statsBar">
-  <div class="stat"><strong id="statVendors">—</strong><span>Active Vendors</span></div>
-  <div class="stat"><strong id="statCustomers">—</strong><span>Registered Customers</span></div>
-  <div class="stat"><strong id="statRiders">—</strong><span>Delivery Riders</span></div>
-  <div class="stat"><strong id="statOrders">—</strong><span>Completed Orders</span></div>
-</div>
+<a class="whatsapp-fab" href="https://wa.me/2348107980542" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp">💬</a>
 
 <div class="vendor-cta">
   <div>
@@ -432,19 +430,6 @@
     }
   }
 
-  async function loadStats() {
-    try {
-      const stats = await window.JWingsDB.rpc("get_public_stats");
-      const row = Array.isArray(stats) ? stats[0] : stats;
-      document.getElementById("statVendors").textContent = row.active_vendors;
-      document.getElementById("statCustomers").textContent = row.customers;
-      document.getElementById("statRiders").textContent = row.active_riders;
-      document.getElementById("statOrders").textContent = row.completed_orders;
-    } catch (err) {
-      // Leave dashes on failure — non-critical.
-    }
-  }
-
   async function refreshCartBadge() {
     const session = window.JWingsDB.getSession();
     if (!session) return;
@@ -461,7 +446,6 @@
 
   loadHeroPreview();
   loadPopularProducts();
-  loadStats();
   refreshCartBadge();
 </script>
 </body>

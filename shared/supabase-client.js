@@ -218,49 +218,29 @@ async function getSignedUrl(bucket, path, accessToken, expiresIn = 3600) {
 
 // ---- Currency conversion -----------------------------------------------
 //
-// Fetches a live exchange rate and caches it via a secure RPC (rates are
-// public, non-sensitive data, but writes go through cache_fx_rate() rather
-// than a direct table insert). Falls back to a stale cached rate if the
-// live API is unreachable, rather than failing outright.
+// Delegates to the get-fx-rate edge function, which does the actual
+// fetch-and-cache using the service role key. fx_rates itself is read-only
+// from the client (no working insert path exists) -- letting clients
+// determine their own "cached" rate (even via an RPC wrapper) would let
+// anyone submit a fabricated exchange rate and manipulate prices, so all
+// caching happens server-side instead.
 
 async function getExchangeRate(fromCurrency, toCurrency, accessToken = null) {
   if (fromCurrency === toCurrency) return 1;
 
-  try {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const cached = await dbSelect(
-      "fx_rates",
-      `select=rate&base_currency=eq.${fromCurrency}&target_currency=eq.${toCurrency}&fetched_at=gte.${oneHourAgo}&order=fetched_at.desc&limit=1`,
-      accessToken
-    );
-    if (cached.length > 0) return Number(cached[0].rate);
-  } catch (err) {
-    // Fall through to live fetch
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/get-fx-rate`, {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({ from: fromCurrency, to: toCurrency }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Couldn't get an exchange rate for ${fromCurrency} → ${toCurrency}`);
   }
 
-  try {
-    const res = await fetch(`https://open.er-api.com/v6/latest/${fromCurrency}`);
-    if (!res.ok) throw new Error("FX API unavailable");
-    const data = await res.json();
-    const rate = data.rates && data.rates[toCurrency];
-    if (!rate) throw new Error(`No rate found for ${toCurrency}`);
-
-    // Cache it for next time via the secure RPC (best-effort).
-    dbRpc("cache_fx_rate", { p_base: fromCurrency, p_target: toCurrency, p_rate: rate }, accessToken).catch(() => {});
-
-    return rate;
-  } catch (err) {
-    try {
-      const stale = await dbSelect(
-        "fx_rates",
-        `select=rate&base_currency=eq.${fromCurrency}&target_currency=eq.${toCurrency}&order=fetched_at.desc&limit=1`,
-        accessToken
-      );
-      if (stale.length > 0) return Number(stale[0].rate);
-    } catch (e) { /* no cache either */ }
-
-    throw new Error(`Couldn't get an exchange rate for ${fromCurrency} → ${toCurrency}`);
-  }
+  const data = await res.json();
+  return Number(data.rate);
 }
 
 const CURRENCY_SYMBOLS = { NGN: "₦", USD: "$", GBP: "£", EUR: "€", GHS: "₵", KES: "KSh", ZAR: "R" };
