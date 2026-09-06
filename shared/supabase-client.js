@@ -274,6 +274,24 @@ async function resendOtp(email, type = "signup") {
   return true;
 }
 
+// Triggers Supabase's password-recovery flow: sends the "Reset Password"
+// email template (with a {{ .Token }} code) to the given address. Always
+// resolves successfully even if the email doesn't exist -- Supabase Auth
+// does this deliberately so this endpoint can't be used to check whether
+// an email is registered.
+async function recoverPassword(email) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.msg || err.error_description || `Couldn't send reset code: ${res.status}`);
+  }
+  return true;
+}
+
 // Changes the signed-in user's password via Supabase Auth's own /user
 // endpoint (not a table — this is Auth, not PostgREST). Supabase requires
 // the caller to already hold a valid access token; there's no separate
@@ -397,6 +415,7 @@ window.JWingsDB = {
   signIn,
   signOut,
   updatePassword,
+  recoverPassword,
   verifyOtp,
   resendOtp,
   saveSession,
