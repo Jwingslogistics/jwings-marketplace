@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Users — JWings Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .side-foot { margin-top: auto; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer; font-family: var(--font-body); padding: 10px 12px; }
+  .logout-btn:hover { color: var(--white); }
+
+  .main { padding: 32px 4vw 64px; }
+  .top-row { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px; }
+  @media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+  .stat-card .value { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); font-weight: 600; }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+  .panel-head h3 { font-family: var(--font-display); font-size: 17px; color: var(--navy-900); }
+
+  .role-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .role-tab {
+    padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    border: 1.5px solid var(--line); background: var(--white); color: var(--muted); font-family: var(--font-body);
+  }
+  .role-tab.active { background: var(--navy-700); border-color: var(--navy-700); color: var(--white); }
+
+  .search-box {
+    padding: 9px 14px; border: 1px solid var(--line); border-radius: 9px; font-size: 13.5px;
+    font-family: var(--font-body); width: 220px; max-width: 100%;
+  }
+
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .data-table td { padding: 10px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .user-name { font-weight: 600; }
+  .user-contact-sub { color: var(--muted); font-size: 12px; }
+
+  .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; text-transform: capitalize; }
+  .status-pill.role-customer { background: #e8ecfb; color: var(--navy-700); }
+  .status-pill.role-vendor { background: #fff4e5; color: var(--orange-500); }
+  .status-pill.role-rider { background: #e6f0ff; color: #2563eb; }
+  .status-pill.role-admin { background: #fdecea; color: var(--danger); }
+  .status-pill.status-active { background: #e9f9f1; color: var(--success); }
+  .status-pill.status-pending { background: #fff4e5; color: var(--orange-500); }
+  .status-pill.status-suspended { background: #fdecea; color: var(--danger); }
+
+  .table-scroll { overflow-x: auto; }
+  .empty-mini { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Admin</span>
+    </div>
+    <nav>
+      <a href="/admin/dashboard.html">Overview</a>
+      <a class="active" href="/admin/users.html">Users</a>
+      <a href="/admin/vendors.html">Vendors</a>
+      <a href="/admin/riders.html">Riders</a>
+      <a href="/admin/customers.html">Customers</a>
+    </nav>
+    <div class="side-foot">
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <div>
+        <h1>Users</h1>
+        <p>Every account on JWings — customers, vendors, riders, and admins.</p>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Total users</div><div class="value" id="statTotal">—</div></div>
+      <div class="stat-card"><div class="label">Customers</div><div class="value" id="statCustomers">—</div></div>
+      <div class="stat-card"><div class="label">Vendors</div><div class="value" id="statVendors">—</div></div>
+      <div class="stat-card"><div class="label">Riders</div><div class="value" id="statRiders">—</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h3>All accounts</h3>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="searchBox" class="search-box" placeholder="Search name, email, phone..." />
+          <div class="role-tabs" id="roleTabs">
+            <div class="role-tab active" data-role="all">All</div>
+            <div class="role-tab" data-role="customer">Customers</div>
+            <div class="role-tab" data-role="vendor">Vendors</div>
+            <div class="role-tab" data-role="rider">Riders</div>
+            <div class="role-tab" data-role="admin">Admins</div>
+          </div>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr><th>Name</th><th>Contact</th><th>Role</th><th>Status</th><th>Joined</th></tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr><td colspan="5"><div class="empty-mini">Loading users...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/admin/users.html";
+
+  let allUsers = [];
+  let activeRole = "all";
+
+  function formatDate(dateStr) {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  function renderUsers() {
+    const searchTerm = document.getElementById("searchBox").value.trim().toLowerCase();
+    const filtered = allUsers.filter(u => {
+      if (activeRole !== "all" && u.role !== activeRole) return false;
+      if (!searchTerm) return true;
+      return `${u.full_name || ""} ${u.email || ""} ${u.phone || ""}`.toLowerCase().includes(searchTerm);
+    });
+
+    const tbody = document.getElementById("usersTableBody");
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-mini">No users match this filter.</div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(u => `
+      <tr>
+        <td><span class="user-name">${u.full_name || "—"}</span></td>
+        <td>
+          <div>${u.email || "—"}</div>
+          <div class="user-contact-sub">${u.phone || "No phone on file"}</div>
+        </td>
+        <td><span class="status-pill role-${u.role || "customer"}">${u.role || "customer"}</span></td>
+        <td><span class="status-pill status-${u.status || "active"}">${u.status || "active"}</span></td>
+        <td>${formatDate(u.created_at)}</td>
+      </tr>`).join("");
+  }
+
+  document.getElementById("searchBox").addEventListener("input", renderUsers);
+  document.getElementById("roleTabs").addEventListener("click", (e) => {
+    const tab = e.target.closest(".role-tab");
+    if (!tab) return;
+    document.querySelectorAll(".role-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    activeRole = tab.getAttribute("data-role");
+    renderUsers();
+  });
+
+  async function init() {
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      if (!profile || profile.role !== "admin") {
+        window.location.href = "/customer/dashboard.html";
+        return;
+      }
+
+      allUsers = await window.JWingsDB.select(
+        "profiles", "select=id,full_name,email,phone,role,status,created_at&order=created_at.desc", session.access_token
+      );
+
+      document.getElementById("statTotal").textContent = allUsers.length;
+      document.getElementById("statCustomers").textContent = allUsers.filter(u => u.role === "customer").length;
+      document.getElementById("statVendors").textContent = allUsers.filter(u => u.role === "vendor").length;
+      document.getElementById("statRiders").textContent = allUsers.filter(u => u.role === "rider").length;
+
+      renderUsers();
+    } catch (err) {
+      document.getElementById("usersTableBody").innerHTML =
+        `<tr><td colspan="5"><div class="empty-mini">Couldn't load users. Please refresh.</div></td></tr>`;
+    }
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await window.JWingsDB.signOut(session.access_token);
+    window.JWingsDB.clearSession();
+    window.location.href = "/customer/login.html";
+  });
+
+  init();
+</script>
+</body>
+</html>
