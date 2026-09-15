@@ -61,7 +61,10 @@
         </div>
         <div class="field">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="At least 8 characters" minlength="8" required />
+          <div style="position:relative;">
+            <input type="password" id="password" name="password" placeholder="At least 8 characters" minlength="8" required style="padding-right:52px;" />
+            <button type="button" id="togglePassword" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:12.5px; font-weight:600; color:#666a80; font-family:inherit;">Show</button>
+          </div>
           <div class="hint">Use 8+ characters with a mix of letters and numbers.</div>
         </div>
 
@@ -95,6 +98,15 @@
   }
   tabCustomer.addEventListener("click", () => setRole("customer"));
   tabRider.addEventListener("click", () => setRole("rider"));
+
+  const passwordInput = document.getElementById("password");
+  const togglePasswordBtn = document.getElementById("togglePassword");
+  togglePasswordBtn.addEventListener("click", () => {
+    const isHidden = passwordInput.type === "password";
+    passwordInput.type = isHidden ? "text" : "password";
+    togglePasswordBtn.textContent = isHidden ? "Hide" : "Show";
+    togglePasswordBtn.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+  });
 
   function showError(message) {
     errorBanner.textContent = message;
