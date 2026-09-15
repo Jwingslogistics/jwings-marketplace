@@ -352,6 +352,21 @@
 
       const shipment = shipments[0];
 
+      // Best-effort notification -- a rider-email failure should never
+      // block the customer's booking confirmation.
+      fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/notify-riders-new-shipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g" },
+        body: JSON.stringify({
+          tracking_id: shipment.tracking_id,
+          pickup_address: pickupAddress,
+          dropoff_address: dropoffAddress,
+          delivery_fee: shipment.delivery_fee,
+          currency: shipment.currency,
+          delivery_type: selectedDeliveryType,
+        }),
+      }).catch(() => { /* non-critical */ });
+
       document.getElementById("pageContent").innerHTML = `
         <div class="confirm-state">
           <div class="icon">📦</div>

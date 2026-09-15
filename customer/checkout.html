@@ -452,7 +452,7 @@
         const trackingId = generateTrackingId();
         trackingIds.push(trackingId);
 
-        await window.JWingsDB.insert("shipments", {
+        const createdShipments = await window.JWingsDB.insert("shipments", {
           tracking_id: trackingId,
           order_id: order.id,
           sender_id: profile.id,
@@ -472,6 +472,22 @@
           payment_status: "unpaid",
           status: "order_received",
         }, session.access_token);
+
+        // Best-effort notification -- a rider-email failure should never
+        // block order placement.
+        const createdShipment = createdShipments[0];
+        fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/notify-riders-new-shipment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g" },
+          body: JSON.stringify({
+            tracking_id: trackingId,
+            pickup_address: createdShipment ? createdShipment.pickup_address : null,
+            dropoff_address: `${fullAddress}, ${city}, ${state}`,
+            delivery_fee: createdShipment ? createdShipment.delivery_fee : deliveryFeeBuyer,
+            currency: buyerCurrency,
+            delivery_type: selectedDeliveryType,
+          }),
+        }).catch(() => { /* non-critical */ });
       }
 
       // Clear the cart now that the order (and shipments) exist.
