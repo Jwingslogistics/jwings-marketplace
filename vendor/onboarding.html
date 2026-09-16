@@ -106,6 +106,10 @@
         status: "pending",
       }, session.access_token);
 
+      window.JWingsDB.notifyAdmin("new_vendor_application", {
+        store_name: storeName, city: city || null, state: state || null,
+      }, session.access_token);
+
       await window.JWingsDB.update("profiles", `id=eq.${profile.id}`, { role: "vendor" }, session.access_token);
 
       window.location.href = "/vendor/dashboard.html?pending=1";

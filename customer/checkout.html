@@ -490,6 +490,10 @@
         }).catch(() => { /* non-critical */ });
       }
 
+      window.JWingsDB.notifyAdmin("order_placed", {
+        order_number: orderNumber, total, buyer_currency: buyerCurrency, delivery_type: selectedDeliveryType,
+      }, session.access_token);
+
       // Clear the cart now that the order (and shipments) exist.
       await window.JWingsDB.remove("cart_items", `customer_id=eq.${session.user.id}`, session.access_token);
 

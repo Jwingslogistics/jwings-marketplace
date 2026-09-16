@@ -256,6 +256,10 @@
     try {
       await window.JWingsDB.rpc("request_vendor_withdrawal", { p_amount: amount }, session.access_token);
 
+      window.JWingsDB.notifyAdmin("withdrawal_request", {
+        owner_type: "vendor", amount, currency: vendor.currency, description: `Withdrawal request from ${vendor.store_name}`,
+      }, session.access_token);
+
       const newBalance = vendor.wallet_balance - amount;
       vendor.wallet_balance = newBalance;
 

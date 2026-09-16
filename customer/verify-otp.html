@@ -168,6 +168,15 @@
       window.JWingsDB.saveSession(result);
       sessionStorage.removeItem("jwings_pending_email");
       sessionStorage.removeItem("jwings_pending_role");
+
+      if (role === "rider" && result.user) {
+        window.JWingsDB.notifyAdmin("new_rider_application", {
+          full_name: result.user.user_metadata ? result.user.user_metadata.full_name : null,
+          email: result.user.email,
+          phone: result.user.user_metadata ? result.user.user_metadata.phone : null,
+        }, result.access_token);
+      }
+
       showSuccess("Account verified! Redirecting...");
       setTimeout(() => window.JWingsDB.redirectForRole(role), 800);
     } catch (err) {

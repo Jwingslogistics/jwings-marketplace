@@ -398,6 +398,22 @@ function redirectForRole(role) {
   window.location.href = routes[role] || "/customer/dashboard.html";
 }
 
+// ---- Admin notifications -------------------------------------------------
+//
+// Fire-and-forget email to every admin account, via the notify-admin-event
+// edge function. Never throws and never blocks the caller -- a notification
+// failure should never stop an order, application, or withdrawal from
+// going through. Requires an authenticated session (the function requires a
+// valid JWT), which every call site already has.
+
+function notifyAdmin(eventType, payload, accessToken) {
+  fetch(`${SUPABASE_URL}/functions/v1/notify-admin-event`, {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({ event_type: eventType, payload: payload || {} }),
+  }).catch(() => { /* non-critical */ });
+}
+
 // ---- Exports ------------------------------------------------------------
 
 window.JWingsDB = {
@@ -411,6 +427,7 @@ window.JWingsDB = {
   getSignedUrl,
   getExchangeRate,
   formatMoney,
+  notifyAdmin,
   signUp,
   signIn,
   signOut,

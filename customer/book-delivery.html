@@ -367,6 +367,11 @@
         }),
       }).catch(() => { /* non-critical */ });
 
+      window.JWingsDB.notifyAdmin("shipment_booked", {
+        tracking_id: shipment.tracking_id, pickup_address: pickupAddress, dropoff_address: dropoffAddress,
+        delivery_fee: shipment.delivery_fee, currency: shipment.currency,
+      }, session.access_token);
+
       document.getElementById("pageContent").innerHTML = `
         <div class="confirm-state">
           <div class="icon">📦</div>
