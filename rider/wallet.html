@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="icon" type="image/png" href="/assets/images/jwings-logo.png" />
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Earnings — JWings Rider</title>
@@ -339,6 +340,10 @@
 
     try {
       await window.JWingsDB.rpc("request_rider_withdrawal", { p_amount: amount }, session.access_token);
+
+      window.JWingsDB.notifyAdmin("withdrawal_request", {
+        owner_type: "rider", amount, currency: "NGN", description: `Withdrawal request from ${rider.rider_code || "a rider"}`,
+      }, session.access_token);
 
       const newBalance = rider.wallet_balance - amount;
       rider.wallet_balance = newBalance;
