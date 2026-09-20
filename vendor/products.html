@@ -198,9 +198,15 @@
           <input type="number" id="pStock" min="0" value="1" required />
         </div>
       </div>
-      <div class="field">
-        <label>Category</label>
-        <select id="pCategory"></select>
+      <div class="row-2">
+        <div class="field">
+          <label>Category</label>
+          <select id="pCategory"></select>
+        </div>
+        <div class="field">
+          <label>Subcategory</label>
+          <select id="pSubcategory"><option value="">(optional)</option></select>
+        </div>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
@@ -272,10 +278,32 @@
     await loadProducts();
   }
 
+  let allCategories = [];
+
+  function getTopLevelCategories() {
+    return allCategories.filter(c => !c.parent_id);
+  }
+  function getSubcategories(parentId) {
+    return allCategories.filter(c => c.parent_id === parentId);
+  }
+
   async function loadCategories() {
-    const categories = await window.JWingsDB.select("categories", "select=id,name&order=name.asc", session.access_token);
+    allCategories = await window.JWingsDB.select("categories", "select=id,name,parent_id&order=name.asc", session.access_token);
+
     const select = document.getElementById("pCategory");
-    select.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+    select.innerHTML = getTopLevelCategories().map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+
+    populateSubcategoryOptions(select.value);
+
+    select.addEventListener("change", () => populateSubcategoryOptions(select.value));
+  }
+
+  function populateSubcategoryOptions(parentId, selectedSubId) {
+    const subSelect = document.getElementById("pSubcategory");
+    const subs = getSubcategories(parentId);
+    subSelect.innerHTML = `<option value="">(optional)</option>` +
+      subs.map(c => `<option value="${c.id}" ${c.id === selectedSubId ? "selected" : ""}>${c.name}</option>`).join("");
+    subSelect.disabled = subs.length === 0;
   }
 
   async function loadProducts() {
@@ -337,6 +365,7 @@
     existingImages = [];
     document.getElementById("modalTitle").textContent = "Add a product";
     document.getElementById("saveBtn").textContent = "Save product";
+    populateSubcategoryOptions(document.getElementById("pCategory").value);
     backdrop.classList.add("show");
   });
   document.getElementById("cancelBtn").addEventListener("click", () => closeModal());
@@ -354,7 +383,17 @@
     document.getElementById("pDescription").value = product.description || "";
     document.getElementById("pPrice").value = product.price;
     document.getElementById("pStock").value = product.stock;
-    document.getElementById("pCategory").value = product.category_id || "";
+
+    // Figure out whether the product's saved category is a top-level
+    // category or a subcategory, and set both selects accordingly.
+    const savedCat = allCategories.find(c => c.id === product.category_id);
+    if (savedCat && savedCat.parent_id) {
+      document.getElementById("pCategory").value = savedCat.parent_id;
+      populateSubcategoryOptions(savedCat.parent_id, savedCat.id);
+    } else if (savedCat) {
+      document.getElementById("pCategory").value = savedCat.id;
+      populateSubcategoryOptions(savedCat.id);
+    }
 
     if (existingImages[0]) {
       document.getElementById("pickerContent").innerHTML = `
@@ -427,7 +466,7 @@
     const description = document.getElementById("pDescription").value.trim();
     const price = parseFloat(document.getElementById("pPrice").value);
     const stock = parseInt(document.getElementById("pStock").value, 10);
-    const categoryId = document.getElementById("pCategory").value;
+    const categoryId = document.getElementById("pSubcategory").value || document.getElementById("pCategory").value;
 
     const saveBtn = document.getElementById("saveBtn");
     const uploadProgress = document.getElementById("uploadProgress");

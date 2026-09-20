@@ -91,6 +91,12 @@
   .cat-item.active { background: var(--navy-700); color: var(--white); }
   .cat-item .count { margin-left: auto; font-size: 12px; color: var(--muted); }
   .cat-item.active .count { color: rgba(255,255,255,0.7); }
+  .cat-toggle { font-size: 10px; color: var(--muted); margin-left: 6px; }
+  .cat-item.active .cat-toggle { color: rgba(255,255,255,0.7); }
+  .cat-group { display: flex; flex-direction: column; }
+  .cat-children { flex-direction: column; gap: 2px; padding-left: 14px; margin-top: 2px; margin-bottom: 4px; }
+  .cat-child { font-size: 13px; padding: 7px 10px; color: var(--muted); }
+  .cat-child.active { background: var(--navy-500); color: var(--white); }
 
   .vendor-cta-card {
     background: linear-gradient(150deg, var(--navy-900), var(--navy-700));
@@ -218,17 +224,72 @@
     return window.JWingsDB.formatMoney(price, currency);
   }
 
+  let expandedParents = new Set();
+
+  function getTopLevel() {
+    return allCategories.filter(c => !c.parent_id);
+  }
+  function getChildren(parentId) {
+    return allCategories.filter(c => c.parent_id === parentId);
+  }
+  // A parent "matches" the active filter if either it or one of its
+  // children is selected -- used to keep the row highlighted while
+  // browsing a subcategory underneath it.
+  function categoryIds(cat) {
+    const children = getChildren(cat.id);
+    return [cat.id, ...children.map(c => c.id)];
+  }
+
   function renderCategories() {
-    const items = [{ id: "", name: "All categories", icon: "🗂️" }, ...allCategories];
-    categoryList.innerHTML = items.map((c) => {
-      const count = c.id === "" ? allProducts.length : allProducts.filter(p => p.category_id === c.id).length;
-      const isActive = activeSlug === (c.slug || "");
-      return `
-        <button class="cat-item ${isActive ? "active" : ""}" data-slug="${c.slug || ""}">
-          <span>${c.icon || "🗂️"}</span><span>${c.name}</span>
-          <span class="count">${count}</span>
-        </button>`;
-    }).join("");
+    const topLevel = getTopLevel();
+    const allCount = allProducts.length;
+
+    let html = `
+      <button class="cat-item ${activeSlug === "" ? "active" : ""}" data-slug="">
+        <span>🗂️</span><span>All categories</span>
+        <span class="count">${allCount}</span>
+      </button>`;
+
+    topLevel.forEach((cat) => {
+      const children = getChildren(cat.id);
+      const ids = categoryIds(cat);
+      const count = allProducts.filter(p => ids.includes(p.category_id)).length;
+      const isParentActive = activeSlug === cat.slug;
+      const isExpanded = expandedParents.has(cat.id) || children.some(c => c.slug === activeSlug);
+
+      html += `
+        <div class="cat-group">
+          <button class="cat-item ${isParentActive ? "active" : ""}" data-slug="${cat.slug}">
+            <span>${cat.icon || "🗂️"}</span><span>${cat.name}</span>
+            <span class="count">${count}</span>
+            ${children.length ? `<span class="cat-toggle" data-parent-id="${cat.id}">${isExpanded ? "▾" : "▸"}</span>` : ""}
+          </button>
+          ${children.length ? `
+            <div class="cat-children" style="display:${isExpanded ? "flex" : "none"};">
+              ${children.map(child => {
+                const childCount = allProducts.filter(p => p.category_id === child.id).length;
+                const isChildActive = activeSlug === child.slug;
+                return `
+                  <button class="cat-item cat-child ${isChildActive ? "active" : ""}" data-slug="${child.slug}">
+                    <span>${child.name}</span>
+                    <span class="count">${childCount}</span>
+                  </button>`;
+              }).join("")}
+            </div>` : ""}
+        </div>`;
+    });
+
+    categoryList.innerHTML = html;
+
+    categoryList.querySelectorAll(".cat-toggle").forEach((toggle) => {
+      toggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const parentId = toggle.getAttribute("data-parent-id");
+        if (expandedParents.has(parentId)) expandedParents.delete(parentId);
+        else expandedParents.add(parentId);
+        renderCategories();
+      });
+    });
 
     categoryList.querySelectorAll(".cat-item").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -251,7 +312,10 @@
 
     if (activeSlug) {
       const cat = allCategories.find(c => c.slug === activeSlug);
-      if (cat) list = list.filter(p => p.category_id === cat.id);
+      if (cat) {
+        const ids = cat.parent_id ? [cat.id] : categoryIds(cat);
+        list = list.filter(p => ids.includes(p.category_id));
+      }
     }
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toLowerCase();
@@ -330,7 +394,7 @@
       }
 
       const [categories, products] = await Promise.all([
-        window.JWingsDB.select("categories", "select=id,name,slug,icon&order=name.asc"),
+        window.JWingsDB.select("categories", "select=id,name,slug,icon,parent_id&order=name.asc"),
         window.JWingsDB.select("products", "select=*,vendors(store_name)&status=eq.active&order=created_at.desc"),
       ]);
 
