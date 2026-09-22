@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="/assets/images/jwings-logo.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My ID Card — JWings Rider</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 6vw; background: rgba(247,248,252,0.92);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo img { width: 30px; height: 30px; }
+  .nav-logo span { font-weight: 700; color: var(--navy-900); font-size: 15.5px; }
+  .nav-links a { font-size: 14px; font-weight: 500; }
+
+  .page-head { padding: 32px 6vw 8px; }
+  .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
+  .page-head p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .content { max-width: 480px; margin: 0 auto; padding: 28px 6vw 72px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  /* ---- ID card ---- */
+  .id-card {
+    width: 340px; height: 214px; /* CR80 card ratio, scaled up for screen */
+    background: linear-gradient(150deg, var(--navy-900), var(--navy-700));
+    border-radius: 16px; color: var(--white); position: relative; overflow: hidden;
+    box-shadow: 0 20px 40px -20px rgba(15,26,92,0.5); padding: 18px 20px;
+    display: flex; flex-direction: column;
+  }
+  .id-card::after {
+    content: ""; position: absolute; right: -40px; bottom: -40px; width: 160px; height: 160px;
+    background: rgba(245,124,0,0.18); border-radius: 50%;
+  }
+  .id-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .id-card-head img { width: 20px; height: 20px; }
+  .id-card-head span { font-weight: 700; font-size: 12.5px; letter-spacing: 0.3px; }
+  .id-card-badge {
+    margin-left: auto; background: var(--orange-500); font-size: 9.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .id-card-body { display: flex; gap: 14px; flex: 1; align-items: center; z-index: 1; }
+  .id-photo {
+    width: 68px; height: 68px; border-radius: 12px; background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.25); flex-shrink: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .id-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .id-details { flex: 1; min-width: 0; }
+  .id-name { font-family: var(--font-display); font-size: 16.5px; font-weight: 600; margin-bottom: 6px; line-height: 1.2; }
+  .id-row { font-size: 10.5px; color: rgba(255,255,255,0.75); margin-bottom: 2px; }
+  .id-row strong { color: var(--white); font-weight: 600; }
+  .id-card-foot {
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.15);
+    display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: rgba(255,255,255,0.65); z-index: 1;
+  }
+  .id-code { font-family: var(--font-display); font-size: 13px; color: var(--white); letter-spacing: 1px; }
+
+  .status-note {
+    font-size: 13px; padding: 10px 16px; border-radius: 10px; text-align: center; max-width: 340px;
+  }
+  .status-note.pending { background: #fff4e5; color: #8a5a00; }
+  .status-note.suspended { background: #fdecea; color: #a5322a; }
+  .status-note.ok { background: #e9f9f1; color: var(--success); }
+
+  .print-btn {
+    background: var(--navy-700); color: var(--white); border: none; padding: 12px 24px;
+    border-radius: 9px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: var(--font-body);
+  }
+  .print-btn:hover { background: var(--navy-900); }
+  .print-btn:disabled { background: #9099c4; cursor: not-allowed; }
+  .print-hint { font-size: 12px; color: var(--muted); text-align: center; max-width: 340px; }
+
+  @media print {
+    .nav, .page-head, .status-note, .print-btn, .print-hint { display: none !important; }
+    body, .content { background: var(--white); padding: 0; margin: 0; }
+    .id-card { box-shadow: none; margin: 40px auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="/">
+    <img src="/assets/images/jwings-logo.png" alt="JWings" />
+    <span>JWings Logistics</span>
+  </a>
+  <div class="nav-links">
+    <a href="/rider/dashboard.html">My Dashboard</a>
+  </div>
+</nav>
+
+<div class="page-head">
+  <h1>My ID Card</h1>
+  <p>Your official JWings rider ID — print it and carry it during deliveries.</p>
+</div>
+
+<div class="content">
+  <div id="statusNote"></div>
+
+  <div class="id-card" id="idCard">
+    <div class="id-card-head">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Logistics</span>
+      <span class="id-card-badge">Rider</span>
+    </div>
+    <div class="id-card-body">
+      <div class="id-photo" id="idPhoto">🏍️</div>
+      <div class="id-details">
+        <div class="id-name" id="idName">Loading...</div>
+        <div class="id-row"><strong id="idVehicle">—</strong></div>
+        <div class="id-row" id="idPhone">—</div>
+      </div>
+    </div>
+    <div class="id-card-foot">
+      <span>Valid while active</span>
+      <span class="id-code" id="idCode">—</span>
+    </div>
+  </div>
+
+  <button class="print-btn" id="printBtn" disabled>Print ID card</button>
+  <p class="print-hint">For best results, print on a standard card or A4 sheet and trim to size.</p>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/customer/login.html?redirect=/rider/id-card.html";
+
+  async function init() {
+    try {
+      const profile = await window.JWingsDB.getMyProfile(session.access_token);
+      if (!profile || profile.role !== "rider") {
+        window.location.href = "/customer/dashboard.html";
+        return;
+      }
+
+      const riders = await window.JWingsDB.select(
+        "riders", `select=*&profile_id=eq.${profile.id}&limit=1`, session.access_token
+      );
+      const rider = riders[0];
+      if (!rider) {
+        document.getElementById("idName").textContent = "Rider profile not found";
+        return;
+      }
+
+      document.getElementById("idName").textContent = profile.full_name || "—";
+      document.getElementById("idPhone").textContent = profile.phone || "";
+      document.getElementById("idVehicle").textContent =
+        [rider.vehicle_type, rider.vehicle_plate].filter(Boolean).join(" · ") || "Vehicle not set";
+      document.getElementById("idCode").textContent = rider.rider_code || "—";
+
+      if (profile.avatar_url) {
+        document.getElementById("idPhoto").innerHTML = `<img src="${profile.avatar_url}" alt="${profile.full_name}" />`;
+      }
+
+      const note = document.getElementById("statusNote");
+      const printBtn = document.getElementById("printBtn");
+
+      if (rider.status === "suspended") {
+        note.innerHTML = `<div class="status-note suspended">Your account is suspended — this ID card isn't valid for use right now.</div>`;
+      } else if (!rider.documents_verified) {
+        note.innerHTML = `<div class="status-note pending">Your documents are still pending verification. You can preview your card, but printing is enabled once you're verified.</div>`;
+      } else {
+        note.innerHTML = `<div class="status-note ok">✓ Verified rider — this card is valid for use.</div>`;
+        printBtn.disabled = false;
+      }
+    } catch (err) {
+      document.getElementById("idName").textContent = "Couldn't load your details";
+    }
+  }
+
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+  init();
+</script>
+</body>
+</html>
