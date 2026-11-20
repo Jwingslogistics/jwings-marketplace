@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Become a Rider — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/auth.css" />
+</head>
+<body>
+<div class="auth-shell">
+
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Logistics</span>
+    </div>
+    <div class="brand-copy">
+      <div class="eyebrow">JWings Riders</div>
+      <h1>Ride with<br/>JWings.</h1>
+      <p>Join our delivery team, accept jobs near you and get paid straight
+        into your JWings wallet.</p>
+    </div>
+    <div class="brand-stats">
+      <div><strong>24/7</strong><span>Delivery jobs</span></div>
+      <div><strong>Fast</strong><span>Wallet payouts</span></div>
+    </div>
+  </div>
+
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="mobile-logo">
+        <img src="/assets/images/jwings-logo.png" alt="JWings" />
+        <span>JWings Logistics</span>
+      </div>
+
+      <h2>Create your rider account</h2>
+      <p class="subtitle">Get started in less than a minute.</p>
+
+      <div class="error-banner" id="errorBanner"></div>
+
+      <form id="signupForm">
+        <div class="field">
+          <label for="fullName">Full name</label>
+          <input type="text" id="fullName" name="fullName" placeholder="e.g. Ada Obi" required />
+        </div>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
+        </div>
+        <div class="field">
+          <label for="phone">Phone number</label>
+          <input type="tel" id="phone" name="phone" placeholder="0810 000 0000" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div style="position:relative;">
+            <input type="password" id="password" name="password" placeholder="At least 8 characters" minlength="8" required style="padding-right:52px;" />
+            <button type="button" id="togglePassword" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:12.5px; font-weight:600; color:#666a80; font-family:inherit;">Show</button>
+          </div>
+          <div class="hint">Use 8+ characters with a mix of letters and numbers.</div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Create account</button>
+      </form>
+
+            <p class="foot-note">Already have an account? <a href="/rider/login.html">Log in</a></p>
+    </div>
+  </div>
+
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const selectedRole = "rider";
+  const errorBanner = document.getElementById("errorBanner");
+  const submitBtn = document.getElementById("submitBtn");
+
+  const passwordInput = document.getElementById("password");
+  const togglePasswordBtn = document.getElementById("togglePassword");
+  togglePasswordBtn.addEventListener("click", () => {
+    const isHidden = passwordInput.type === "password";
+    passwordInput.type = isHidden ? "text" : "password";
+    togglePasswordBtn.textContent = isHidden ? "Hide" : "Show";
+    togglePasswordBtn.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+  });
+
+  function showError(message) {
+    errorBanner.textContent = message;
+    errorBanner.classList.add("show");
+  }
+  function hideError() {
+    errorBanner.classList.remove("show");
+  }
+
+  document.getElementById("signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    hideError();
+
+    const fullName = document.getElementById("fullName").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("password").value;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creating account...";
+
+    try {
+      await window.JWingsDB.signUp(email, password, {
+        full_name: fullName,
+        phone: phone,
+        role: selectedRole,
+      });
+
+      // Carry email + role forward to the OTP screen via sessionStorage
+      sessionStorage.setItem("jwings_pending_email", email);
+      sessionStorage.setItem("jwings_pending_role", selectedRole);
+      window.location.href = "/rider/verify-otp.html";
+    } catch (err) {
+      showError(err.message || "Something went wrong. Please try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create account";
+    }
+  });
+
+</script>
+</body>
+</html>

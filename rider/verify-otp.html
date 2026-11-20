@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verify your email — JWings Riders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/auth.css" />
+</head>
+<body>
+<div class="auth-shell">
+
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Logistics</span>
+    </div>
+    <div class="brand-copy">
+      <div class="eyebrow">JWings Riders</div>
+      <h1>Check your<br/>email.</h1>
+      <p>We sent a 6-digit code to confirm your rider account.</p>
+    </div>
+  </div>
+
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="mobile-logo">
+        <img src="/assets/images/jwings-logo.png" alt="JWings" />
+        <span>JWings Logistics</span>
+      </div>
+
+      <h2>Verify your email</h2>
+      <p class="subtitle">Enter the code we sent to confirm your rider account.</p>
+
+      <div class="error-banner" id="errorBanner"></div>
+      <div class="error-banner" id="successBanner" style="background:#e6f7ef; color:#1e9e6a; border-color:#b8ebd2;"></div>
+
+      <form id="otpForm">
+        <div class="field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
+        </div>
+        <div class="field">
+          <label for="code">Verification code</label>
+          <input type="text" id="code" name="code" placeholder="6-digit code" inputmode="numeric" required />
+        </div>
+        <button type="submit" class="btn-primary" id="submitBtn">Verify</button>
+      </form>
+
+      <p class="foot-note">Didn't get a code? <a href="#" id="resendLink">Resend code</a></p>
+      <p class="foot-note"><a href="/rider/login.html">Back to rider log in</a></p>
+    </div>
+  </div>
+
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const errorBanner = document.getElementById("errorBanner");
+  const successBanner = document.getElementById("successBanner");
+  const submitBtn = document.getElementById("submitBtn");
+
+  const emailInput = document.getElementById("email");
+  const pending = sessionStorage.getItem("jwings_pending_email");
+  if (pending) emailInput.value = pending;
+
+  function showError(m) { successBanner.classList.remove("show"); errorBanner.textContent = m; errorBanner.classList.add("show"); }
+  function showSuccess(m) { errorBanner.classList.remove("show"); successBanner.textContent = m; successBanner.classList.add("show"); }
+
+  document.getElementById("otpForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBanner.classList.remove("show");
+    const email = emailInput.value.trim();
+    const code = document.getElementById("code").value.trim();
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Verifying...";
+    try {
+      const result = await window.JWingsDB.verifyOtp(email, code, "signup");
+      const session = result.session || result;
+      window.JWingsDB.saveSession(session);
+      sessionStorage.removeItem("jwings_pending_email");
+      sessionStorage.removeItem("jwings_pending_role");
+      window.location.href = "/rider/dashboard.html";
+    } catch (err) {
+      showError(err.message || "That code is invalid or has expired.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Verify";
+    }
+  });
+
+  document.getElementById("resendLink").addEventListener("click", async (e) => {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    if (!email) { showError("Enter your email first."); return; }
+    try {
+      await window.JWingsDB.resendOtp(email, "signup");
+      showSuccess("A new code is on its way.");
+    } catch (err) {
+      showError(err.message || "Couldn't resend the code.");
+    }
+  });
+</script>
+</body>
+</html>

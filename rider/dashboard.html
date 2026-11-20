@@ -162,7 +162,7 @@
 <script src="/shared/supabase-client.js"></script>
 <script>
   const session = window.JWingsDB.getSession();
-  if (!session) window.location.href = "/customer/login.html?redirect=/rider/dashboard.html";
+  if (!session) window.location.href = "/rider/login.html?redirect=/rider/dashboard.html";
 
   let rider = null;
   const STATUS_FLOW = ["rider_assigned", "picked_up", "in_transit", "arriving_soon", "delivered"];
@@ -375,7 +375,7 @@
   document.getElementById("logoutBtn").addEventListener("click", async () => {
     await window.JWingsDB.signOut(session.access_token);
     window.JWingsDB.clearSession();
-    window.location.href = "/customer/login.html";
+    window.location.href = "/rider/login.html";
   });
 
   init();

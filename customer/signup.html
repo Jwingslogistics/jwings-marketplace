@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-<link rel="icon" type="image/png" href="/assets/images/jwings-logo.png" />
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Create your account — JWings Logistics</title>
@@ -26,7 +25,7 @@
     <div class="brand-stats">
       <div><strong>128+</strong><span>Active vendors</span></div>
       <div><strong>4.7★</strong><span>Average rating</span></div>
-      <div><strong>24/7</strong><span>Rider network</span></div>
+      <div><strong>24/7</strong><span>Order tracking</span></div>
     </div>
   </div>
 
@@ -41,11 +40,6 @@
       <p class="subtitle">Get started in less than a minute.</p>
 
       <div class="error-banner" id="errorBanner"></div>
-
-      <div class="role-tabs" role="tablist" aria-label="Account type">
-        <button type="button" class="active" data-role="customer" id="tabCustomer">Customer</button>
-        <button type="button" data-role="rider" id="tabRider">Rider</button>
-      </div>
 
       <form id="signupForm">
         <div class="field">
@@ -86,19 +80,9 @@
 
 <script src="/shared/supabase-client.js"></script>
 <script>
-  let selectedRole = "customer";
-  const tabCustomer = document.getElementById("tabCustomer");
-  const tabRider = document.getElementById("tabRider");
+  const selectedRole = "customer";
   const errorBanner = document.getElementById("errorBanner");
   const submitBtn = document.getElementById("submitBtn");
-
-  function setRole(role) {
-    selectedRole = role;
-    tabCustomer.classList.toggle("active", role === "customer");
-    tabRider.classList.toggle("active", role === "rider");
-  }
-  tabCustomer.addEventListener("click", () => setRole("customer"));
-  tabRider.addEventListener("click", () => setRole("rider"));
 
   const passwordInput = document.getElementById("password");
   const togglePasswordBtn = document.getElementById("togglePassword");

@@ -141,7 +141,7 @@
 <script src="/shared/supabase-client.js"></script>
 <script>
   const session = window.JWingsDB.getSession();
-  if (!session) window.location.href = "/customer/login.html?redirect=/rider/id-card.html";
+  if (!session) window.location.href = "/rider/login.html?redirect=/rider/id-card.html";
 
   async function init() {
     try {
