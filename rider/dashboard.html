@@ -135,6 +135,12 @@
   .bnav a.active { color: #1a237e; }
   .bnav a.active svg { stroke: #f57c00; }
   @media print { .bnav { display: none !important; } body { padding-bottom: 0; } }
+  .pickup-timer {
+    background: #fff4e5; border: 1px solid #ffddb0; color: #b25e00; border-radius: 10px;
+    padding: 10px 12px; font-size: 12.5px; font-weight: 600; margin-bottom: 14px; line-height: 1.5;
+  }
+  .pickup-timer.urgent { background: #fdecea; border-color: #f5c6c2; color: #b93838; }
+  .pickup-timer .clock { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -328,9 +334,30 @@
   // Keep the location "fresh" even if the rider is standing still.
   setInterval(() => { if (rider && rider.is_online) pushLocation(true); }, 60000);
 
+  // ---- 15-minute pickup countdown ----
+  const PICKUP_LIMIT_MS = 15 * 60 * 1000;
+  setInterval(() => {
+    document.querySelectorAll(".pickup-timer").forEach((el) => {
+      const left = new Date(el.getAttribute("data-deadline")).getTime() - Date.now();
+      const clock = el.querySelector(".clock");
+      if (left <= 0) {
+        clock.textContent = "00:00";
+        el.classList.add("urgent");
+        return;
+      }
+      const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
+      clock.textContent = `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+      el.classList.toggle("urgent", left <= 5 * 60000);
+    });
+  }, 1000);
+
   // Check for new jobs every 15 seconds while online.
   setInterval(() => {
     if (rider && rider.is_online) loadAvailableJobs();
+    // If a pickup deadline has passed, the server may have reassigned the order - refresh.
+    const overdue = [...document.querySelectorAll(".pickup-timer")]
+      .some((el) => new Date(el.getAttribute("data-deadline")).getTime() < Date.now());
+    if (rider && overdue) loadJobs();
   }, 15000);
 
   const STATUS_FLOW = ["rider_assigned", "picked_up", "in_transit", "arriving_soon", "delivered"];
@@ -559,6 +586,10 @@
           <div class="point"><div class="tag">Pickup</div><div class="addr">${job.pickup_address}</div></div>
           <div class="point"><div class="tag">Drop-off</div><div class="addr">${job.dropoff_address}</div></div>
         </div>
+        ${job.status === "rider_assigned" && job.accepted_at ? `
+          <div class="pickup-timer" data-deadline="${new Date(new Date(job.accepted_at).getTime() + PICKUP_LIMIT_MS).toISOString()}">
+            Pick up within <span class="clock">--:--</span>. If you haven't marked it as picked up by then, this order will be reassigned to another rider.
+          </div>` : ""}
         <div class="job-meta">${job.recipient_name} · ${job.recipient_phone}</div>
         ${nextLabel ? `
           <div class="job-actions">
@@ -582,6 +613,7 @@
             shipment_id: jobId, status: "rider_assigned", note: "Rider accepted the job",
           }, session.access_token);
           await loadJobs();
+          alert("Job accepted. Get to the pickup location and mark it as picked up within 15 minutes, or the order will be reassigned to another rider.");
         } catch (err) {
           await loadActiveJobs();
           await refreshLock();
