@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-<link rel="icon" type="image/png" href="/assets/images/jwings-logo.png" />
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Settings — JWings Rider</title>
@@ -111,18 +110,31 @@
   .modal-cancel { background: var(--bg); color: var(--ink); border: 1px solid var(--line) !important; }
   .modal-submit.modal-danger { background: var(--danger); color: var(--white); }
   .modal-submit.modal-danger:hover { background: #b93838; }
+
+  /* ---- Bottom navigation ---- */
+  body { padding-bottom: 76px; }
+  .bnav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; display: flex; justify-content: space-around;
+    background: #ffffff; border-top: 1px solid #e6e8f0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(15,26,92,0.07);
+  }
+  .bnav a {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px;
+    font-size: 11px; font-weight: 600; color: #666a80; border-radius: 10px; text-decoration: none;
+  }
+  .bnav a svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .bnav a.active { color: #1a237e; }
+  .bnav a.active svg { stroke: #f57c00; }
+  @media print { .bnav { display: none !important; } body { padding-bottom: 0; } }
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a class="nav-logo" href="/">
+  <a class="nav-logo" href="/rider/dashboard.html">
     <img src="/assets/images/jwings-logo.png" alt="JWings" />
-    <span>JWings Logistics</span>
+    <span>JWings Rider</span>
   </a>
-  <div class="nav-links">
-    <a href="/rider/dashboard.html">My Dashboard</a>
-  </div>
 </nav>
 
 <div class="page-head">
@@ -254,6 +266,11 @@
 
   <!-- ACCOUNT / DANGER TAB -->
   <div class="tab-panel" id="tab-danger">
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-head"><h3>Log out</h3></div>
+      <p style="font-size:13.5px; color:var(--muted); line-height:1.6; margin-bottom:16px;">Sign out of your rider account on this device.</p>
+      <button class="danger-btn" id="logoutBtn">Log out</button>
+    </div>
     <div class="panel danger-panel">
       <div class="panel-head"><h3>Deactivate account</h3></div>
       <p style="font-size:13.5px; color:var(--muted); line-height:1.6; margin-bottom:16px;">
@@ -476,7 +493,20 @@
     }
   });
 
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await window.JWingsDB.signOut(session.access_token);
+    window.JWingsDB.clearSession();
+    window.location.href = "/rider/login.html";
+  });
+
   init();
 </script>
+<div class="bnav" role="navigation" aria-label="Rider menu">
+  <a href="/rider/dashboard.html"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Home</span></a>
+  <a href="/rider/wallet.html"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><circle cx="16" cy="15" r="1.2"/></svg><span>Wallet</span></a>
+  <a href="/rider/id-card.html"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.6 1.7-2.2 3-2.2s2.4.6 3 2.2"/><path d="M14 10h4M14 13h3"/></svg><span>ID Card</span></a>
+  <a href="/rider/documents.html"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5L15.5 10"/></svg><span>Verification</span></a>
+  <a href="/rider/settings.html" class="active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9c.6.5 1.3.9 2 1.2L10 21h4l.6-2.6c.7-.3 1.4-.7 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg><span>Settings</span></a>
+</div>
 </body>
 </html>

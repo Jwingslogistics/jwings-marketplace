@@ -48,16 +48,33 @@
   .logout-btn:hover { color: var(--danger); }
   .nav-right { display: flex; align-items: center; }
 
+
   .page-head { padding: 32px 6vw 8px; }
   .page-head .eyebrow { color: var(--orange-500); font-size: 12.5px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; margin-bottom: 8px; }
   .page-head h1 { font-family: var(--font-display); font-size: 26px; color: var(--navy-900); }
   .page-head p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
 
-  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; padding: 20px 6vw; }
-  @media (max-width: 700px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 20px 6vw; }
+  @media (max-width: 700px) { .stat-grid { grid-template-columns: 1fr 1fr 1fr; gap: 10px; } }
   .stat-card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
   .stat-card .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
   .stat-card .value { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); font-weight: 600; }
+
+
+  .tabs { display: flex; gap: 8px; padding: 0 6vw; margin-bottom: 20px; overflow-x: auto; }
+  .tab-btn {
+    flex: 1; min-width: max-content; padding: 12px 16px; border: 1px solid var(--line); background: var(--white);
+    border-radius: 12px; font-family: var(--font-body); font-size: 14px; font-weight: 700; color: var(--muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .tab-btn.active { background: var(--navy-700); border-color: var(--navy-700); color: var(--white); }
+  .tab-badge {
+    background: var(--orange-500); color: var(--white); border-radius: 20px; font-size: 11.5px;
+    padding: 1px 8px; min-width: 20px; text-align: center;
+  }
+  .tab-badge:empty { display: none; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
   .content { padding: 0 6vw 72px; }
   .section-block { margin-bottom: 32px; }
@@ -102,12 +119,28 @@
     background: #fff4e5; border: 1px solid #ffddb0; color: var(--orange-500); border-radius: 12px;
     padding: 14px 18px; font-size: 13.5px; font-weight: 600; margin: 0 6vw 20px; text-align: center;
   }
+
+  /* ---- Bottom navigation ---- */
+  body { padding-bottom: 76px; }
+  .bnav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; display: flex; justify-content: space-around;
+    background: #ffffff; border-top: 1px solid #e6e8f0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(15,26,92,0.07);
+  }
+  .bnav a {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px;
+    font-size: 11px; font-weight: 600; color: #666a80; border-radius: 10px; text-decoration: none;
+  }
+  .bnav a svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .bnav a.active { color: #1a237e; }
+  .bnav a.active svg { stroke: #f57c00; }
+  @media print { .bnav { display: none !important; } body { padding-bottom: 0; } }
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a class="nav-logo" href="/">
+  <a class="nav-logo" href="/rider/dashboard.html">
     <img src="/assets/images/jwings-logo.png" alt="JWings" />
     <span>JWings Rider</span>
   </a>
@@ -116,11 +149,6 @@
       <span class="status-label" id="statusLabel">Offline</span>
       <div class="switch" id="onlineSwitch"><div class="knob"></div></div>
     </div>
-    <a href="/rider/documents.html" style="margin-left:14px; font-size:13.5px; font-weight:600; color:var(--navy-700);">Verification</a>
-    <a href="/rider/wallet.html" style="margin-left:14px; font-size:13.5px; font-weight:600; color:var(--navy-700);">Earnings</a>
-    <a href="/rider/id-card.html" style="margin-left:14px; font-size:13.5px; font-weight:600; color:var(--navy-700);">ID Card</a>
-    <a href="/rider/settings.html" style="margin-left:14px; font-size:13.5px; font-weight:600; color:var(--navy-700);">Settings</a>
-    <button class="logout-btn" id="logoutBtn">Log out</button>
   </div>
 </nav>
 
@@ -134,29 +162,45 @@
   You're offline — go online to see and accept new delivery jobs.
 </div>
 
+<div id="locationTip" class="offline-banner" style="display:none;"></div>
+
+<div id="soundTip" class="offline-banner" style="display:none; cursor:pointer;">
+  🔔 Tap anywhere on this page to turn on the new-job alert sound.
+</div>
+
 <div class="stat-grid">
   <div class="stat-card"><div class="label">Active jobs</div><div class="value" id="statActive">0</div></div>
   <div class="stat-card"><div class="label">Completed today</div><div class="value" id="statCompleted">0</div></div>
-  <div class="stat-card"><div class="label">Wallet balance</div><div class="value" id="statWallet">₦0</div></div>
   <div class="stat-card"><div class="label">Rating</div><div class="value" id="statRating">—</div></div>
 </div>
 
+<div class="tabs" role="tablist">
+  <button type="button" class="tab-btn active" data-tab="available" role="tab">Available jobs <span class="tab-badge" id="availableCount"></span></button>
+  <button type="button" class="tab-btn" data-tab="active" role="tab">My active deliveries <span class="tab-badge" id="activeCount"></span></button>
+  <button type="button" class="tab-btn" data-tab="delivered" role="tab">Delivered</button>
+</div>
+
 <div class="content">
-  <div class="section-block">
-    <div class="section-head">
-      <h2>My active deliveries</h2>
-      <span class="count-tag" id="activeCount"></span>
-    </div>
+  <div class="tab-panel active" id="panel-available">
+    <div id="limitNote" class="offline-banner" style="display:none; margin:0 0 14px;"></div>
+    <div id="availableJobs"><div class="empty-mini"><p>Loading...</p></div></div>
+  </div>
+
+  <div class="tab-panel" id="panel-active">
     <div id="activeJobs"><div class="empty-mini"><p>Loading...</p></div></div>
   </div>
 
-  <div class="section-block">
-    <div class="section-head">
-      <h2>Available jobs</h2>
-      <span class="count-tag" id="availableCount"></span>
-    </div>
-    <div id="availableJobs"><div class="empty-mini"><p>Loading...</p></div></div>
+  <div class="tab-panel" id="panel-delivered">
+    <div id="deliveredJobs"><div class="empty-mini"><p>Loading...</p></div></div>
   </div>
+</div>
+
+<div class="bnav" role="navigation" aria-label="Rider menu">
+  <a href="/rider/dashboard.html" class="active"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Home</span></a>
+  <a href="/rider/wallet.html"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><circle cx="16" cy="15" r="1.2"/></svg><span>Wallet</span></a>
+  <a href="/rider/id-card.html"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.6 1.7-2.2 3-2.2s2.4.6 3 2.2"/><path d="M14 10h4M14 13h3"/></svg><span>ID Card</span></a>
+  <a href="/rider/documents.html"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5L15.5 10"/></svg><span>Verification</span></a>
+  <a href="/rider/settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9c.6.5 1.3.9 2 1.2L10 21h4l.6-2.6c.7-.3 1.4-.7 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg><span>Settings</span></a>
 </div>
 
 <script src="/shared/supabase-client.js"></script>
@@ -165,6 +209,130 @@
   if (!session) window.location.href = "/rider/login.html?redirect=/rider/dashboard.html";
 
   let rider = null;
+
+  // ---- Tabs ----
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const name = btn.getAttribute("data-tab");
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
+    });
+  });
+
+  // ---- New-job notification sound -------------------------------------
+  // Browsers only allow sound after the person has tapped or clicked the
+  // page once, so we unlock audio on the first interaction.
+  let knownJobIds = new Set();
+  let lastRenderedIds = null;
+  let audioCtx = null;
+  let soundReady = false;
+
+  function unlockSound() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      soundReady = audioCtx.state !== "suspended";
+    } catch (e) { soundReady = false; }
+    const tip = document.getElementById("soundTip");
+    if (tip) tip.style.display = soundReady ? "none" : "block";
+  }
+  ["click", "touchstart", "keydown"].forEach((ev) =>
+    document.addEventListener(ev, unlockSound, { passive: true })
+  );
+
+  function playDing() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    // Three rising tones, repeated twice, so it's hard to miss.
+    [0, 0.9].forEach((offset) => {
+      [880, 1100, 1320].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const t = now + offset + i * 0.22;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.5, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 0.4);
+      });
+    });
+  }
+
+  function notifyNewJob(count) {
+    if (soundReady) playDing();
+    else document.getElementById("soundTip").style.display = "block";
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+    const original = "JWings Rider";
+    document.title = `(${count}) New delivery job!`;
+    setTimeout(() => { document.title = original; }, 8000);
+  }
+
+  // ---- Rider location (only jobs within 5 km are shown) ---------------
+  let watchId = null;
+  let latestPos = null;
+  let gotFirstFix = false;
+  let lastSentAt = 0;
+
+  function setLocationTip(msg) {
+    const tip = document.getElementById("locationTip");
+    tip.textContent = msg || "";
+    tip.style.display = msg ? "block" : "none";
+  }
+
+  async function pushLocation(force) {
+    if (!latestPos || !rider) return;
+    const now = Date.now();
+    if (!force && now - lastSentAt < 20000) return;
+    lastSentAt = now;
+    try {
+      await window.JWingsDB.update("riders", `id=eq.${rider.id}`, {
+        current_lat: latestPos.latitude,
+        current_lng: latestPos.longitude,
+        location_updated_at: new Date().toISOString(),
+      }, session.access_token);
+    } catch (e) { /* will retry on next update */ }
+  }
+
+  function startLocationTracking() {
+    if (watchId !== null) return;
+    if (!navigator.geolocation) {
+      setLocationTip("📍 This phone or browser can't share its location, so no jobs can be shown.");
+      return;
+    }
+    gotFirstFix = false;
+    watchId = navigator.geolocation.watchPosition(
+      async (pos) => {
+        latestPos = pos.coords;
+        setLocationTip("");
+        const first = !gotFirstFix;
+        gotFirstFix = true;
+        await pushLocation(first);
+        if (first) loadAvailableJobs();
+      },
+      () => {
+        setLocationTip("📍 Turn on location for this site (tap Allow) to see jobs near you. Only jobs within 5 km are shown.");
+      },
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
+    );
+  }
+
+  function stopLocationTracking() {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    latestPos = null;
+    gotFirstFix = false;
+  }
+
+  // Keep the location "fresh" even if the rider is standing still.
+  setInterval(() => { if (rider && rider.is_online) pushLocation(true); }, 60000);
+
+  // Check for new jobs every 15 seconds while online.
+  setInterval(() => {
+    if (rider && rider.is_online) loadAvailableJobs();
+  }, 15000);
+
   const STATUS_FLOW = ["rider_assigned", "picked_up", "in_transit", "arriving_soon", "delivered"];
   const STATUS_LABELS = {
     order_received: "Order received", rider_assigned: "Assigned to you", picked_up: "Picked up",
@@ -195,9 +363,9 @@
     }
 
     document.getElementById("riderCode").textContent = `Rider ${rider.rider_code}`;
-    document.getElementById("statWallet").textContent = money(rider.wallet_balance, "NGN");
     document.getElementById("statRating").textContent = rider.total_reviews > 0 ? `${rider.average_rating}★` : "No ratings yet";
     setOnlineUI(rider.is_online);
+    if (rider.is_online) startLocationTracking();
 
     document.getElementById("onlineSwitch").addEventListener("click", toggleOnline);
 
@@ -216,6 +384,7 @@
     try {
       await window.JWingsDB.update("riders", `id=eq.${rider.id}`, { is_online: newStatus }, session.access_token);
       rider.is_online = newStatus;
+      if (newStatus) startLocationTracking(); else { stopLocationTracking(); setLocationTip(""); }
       await loadJobs();
     } catch (err) {
       setOnlineUI(!newStatus);
@@ -223,8 +392,68 @@
     }
   }
 
+  // ---- Max 3 active orders; once at 3, deliver 2 before accepting more ----
+  const MAX_ACTIVE = 3;
+  let activeCount = 0;
+  let acceptLocked = false;
+
+  async function refreshLock() {
+    try {
+      const rows = await window.JWingsDB.select("rider_limits", `select=locked&rider_id=eq.${rider.id}&limit=1`, session.access_token);
+      acceptLocked = !!(rows[0] && rows[0].locked);
+    } catch (e) { /* keep previous value */ }
+  }
+
+  function isAtLimit() { return acceptLocked || activeCount >= MAX_ACTIVE; }
+
+  function applyLockUI() {
+    const note = document.getElementById("limitNote");
+    const blocked = isAtLimit();
+    document.querySelectorAll(".btn-accept").forEach((b) => {
+      if (blocked) { b.disabled = true; b.textContent = "Limit reached"; }
+      else if (b.textContent === "Limit reached") { b.disabled = false; b.textContent = "Accept job"; }
+    });
+    if (blocked) {
+      const toGo = Math.max(1, activeCount - 1);
+      note.style.display = "block";
+      note.textContent = `You have ${activeCount} active deliver${activeCount === 1 ? "y" : "ies"} (max ${MAX_ACTIVE}). Deliver ${toGo} more to accept new jobs.`;
+    } else if (activeCount > 0) {
+      note.style.display = "block";
+      note.textContent = `${activeCount} of ${MAX_ACTIVE} active delivery slots used.`;
+    } else {
+      note.style.display = "none";
+    }
+  }
+
   async function loadJobs() {
-    await Promise.all([loadActiveJobs(), loadAvailableJobs()]);
+    await Promise.all([loadActiveJobs(), loadAvailableJobs(), loadDeliveredJobs(), refreshLock()]);
+    applyLockUI();
+  }
+
+  // The fee is only shown here, once a delivery is finished.
+  async function loadDeliveredJobs() {
+    const container = document.getElementById("deliveredJobs");
+    try {
+      const jobs = await window.JWingsDB.select(
+        "shipments",
+        `select=id,tracking_id,dropoff_address,delivery_fee,currency&rider_id=eq.${rider.id}&status=eq.delivered&order=created_at.desc&limit=10`,
+        session.access_token
+      );
+      if (jobs.length === 0) {
+        container.innerHTML = `<div class="empty-mini"><div class="icon">📦</div><p>Completed deliveries and what you earned will show here.</p></div>`;
+        return;
+      }
+      container.innerHTML = jobs.map((job) => `
+        <div class="job-card">
+          <div class="job-top">
+            <span class="job-code">${job.tracking_id}</span>
+            <span class="job-fee">${money(job.delivery_fee, job.currency)}</span>
+          </div>
+          <div class="job-meta">Delivered to ${job.dropoff_address}</div>
+        </div>`).join("");
+    } catch (err) {
+      container.innerHTML = `<div class="empty-mini"><p>Couldn't load delivered jobs.</p></div>`;
+    }
   }
 
   async function loadActiveJobs() {
@@ -237,7 +466,8 @@
       );
 
       document.getElementById("statActive").textContent = jobs.length;
-      document.getElementById("activeCount").textContent = `${jobs.length} job${jobs.length === 1 ? "" : "s"}`;
+      activeCount = jobs.length;
+      document.getElementById("activeCount").textContent = jobs.length > 0 ? String(jobs.length) : "";
 
       if (jobs.length === 0) {
         container.innerHTML = `<div class="empty-mini"><div class="icon">🚴</div><p>No active deliveries right now.</p></div>`;
@@ -261,6 +491,8 @@
   async function loadAvailableJobs() {
     const container = document.getElementById("availableJobs");
     if (!rider.is_online) {
+      knownJobIds = new Set();
+      lastRenderedIds = null;
       container.innerHTML = `<div class="empty-mini"><div class="icon">📴</div><p>Go online to see available jobs.</p></div>`;
       document.getElementById("availableCount").textContent = "";
       return;
@@ -273,13 +505,24 @@
         session.access_token
       );
 
-      document.getElementById("availableCount").textContent = `${jobs.length} available`;
+      document.getElementById("availableCount").textContent = jobs.length > 0 ? String(jobs.length) : "";
 
-      if (jobs.length === 0) {
-        container.innerHTML = `<div class="empty-mini"><div class="icon">✅</div><p>No jobs waiting right now — check back soon.</p></div>`;
-      } else {
-        container.innerHTML = jobs.map(renderAvailableJobCard).join("");
-        attachAcceptHandlers();
+      // Ring when a job appears that the rider hasn't been told about yet.
+      const ids = jobs.map((j) => j.id);
+      const hasNew = ids.some((id) => !knownJobIds.has(id));
+      const changed = ids.join(",") !== lastRenderedIds;
+      if (hasNew) notifyNewJob(jobs.length);
+      knownJobIds = new Set(ids);
+
+      if (changed) {
+        lastRenderedIds = ids.join(",");
+        if (jobs.length === 0) {
+          container.innerHTML = `<div class="empty-mini"><div class="icon">✅</div><p>No jobs within 5 km of you right now — check back soon.</p></div>`;
+        } else {
+          container.innerHTML = jobs.map(renderAvailableJobCard).join("");
+          attachAcceptHandlers();
+          applyLockUI();
+        }
       }
     } catch (err) {
       container.innerHTML = `<div class="empty-mini"><p>Couldn't load available jobs.</p></div>`;
@@ -291,7 +534,7 @@
       <div class="job-card">
         <div class="job-top">
           <span class="job-code">${job.tracking_id}</span>
-          <span class="job-fee">${money(job.delivery_fee, job.currency)}</span>
+          <span class="status-pill">New job</span>
         </div>
         <div class="job-route">
           <div class="point"><div class="tag">Pickup</div><div class="addr">${job.pickup_address}</div></div>
@@ -327,6 +570,7 @@
   function attachAcceptHandlers() {
     document.querySelectorAll(".btn-accept").forEach((btn) => {
       btn.addEventListener("click", async () => {
+        if (isAtLimit()) { applyLockUI(); return; }
         const jobId = btn.getAttribute("data-job-id");
         btn.disabled = true;
         btn.textContent = "Accepting...";
@@ -339,7 +583,13 @@
           }, session.access_token);
           await loadJobs();
         } catch (err) {
-          alert("This job may have just been taken by another rider. Refreshing the list.");
+          await loadActiveJobs();
+          await refreshLock();
+          if (isAtLimit()) {
+            alert(`You can't accept more orders right now. You have ${activeCount} active — deliver at least two before accepting another.`);
+          } else {
+            alert("This job may have just been taken by another rider. Refreshing the list.");
+          }
           await loadJobs();
         }
       });
@@ -371,12 +621,6 @@
       });
     });
   }
-
-  document.getElementById("logoutBtn").addEventListener("click", async () => {
-    await window.JWingsDB.signOut(session.access_token);
-    window.JWingsDB.clearSession();
-    window.location.href = "/rider/login.html";
-  });
 
   init();
 </script>
