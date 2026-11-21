@@ -272,22 +272,24 @@
       <button class="danger-btn" id="logoutBtn">Log out</button>
     </div>
     <div class="panel danger-panel">
-      <div class="panel-head"><h3>Deactivate account</h3></div>
+      <div class="panel-head"><h3>Request account deactivation</h3></div>
       <p style="font-size:13.5px; color:var(--muted); line-height:1.6; margin-bottom:16px;">
-        This will suspend your rider account and sign you out. You won't be assigned new deliveries until reactivated by support.
+        To deactivate your rider account, send a request to JWings. An admin will review and approve it. Your account stays active until then.
       </p>
-      <button class="danger-btn" id="deactivateBtn">Deactivate my account</button>
+      <p id="deactStatus" style="display:none; font-size:13.5px; font-weight:600; margin-bottom:14px;"></p>
+      <button class="danger-btn" id="deactivateBtn">Request deactivation</button>
     </div>
   </div>
 </div>
 
 <div class="modal-backdrop" id="deactivateModal">
   <div class="modal">
-    <h3>Deactivate your account?</h3>
-    <p>You'll be signed out immediately and won't receive new delivery assignments until your account is reactivated. Your wallet balance and history are kept.</p>
+    <h3>Request deactivation?</h3>
+    <p>This sends a request to JWings. You'll stay active and keep working until an admin approves it. Your wallet balance and history are kept.</p>
+    <textarea id="deactReason" rows="3" placeholder="Reason (optional)" style="width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; font-family:inherit; font-size:13.5px; margin-bottom:14px;"></textarea>
     <div class="modal-actions">
       <button class="modal-cancel" id="deactCancelBtn" type="button">Cancel</button>
-      <button class="modal-submit modal-danger" id="deactConfirmBtn" type="button">Yes, deactivate</button>
+      <button class="modal-submit modal-danger" id="deactConfirmBtn" type="button">Send request</button>
     </div>
   </div>
 </div>
@@ -480,18 +482,39 @@
   document.getElementById("deactConfirmBtn").addEventListener("click", async () => {
     const btn = document.getElementById("deactConfirmBtn");
     btn.disabled = true;
-    btn.textContent = "Deactivating...";
+    btn.textContent = "Sending...";
     try {
-      await window.JWingsDB.rpc("deactivate_own_account", {}, session.access_token);
-      await window.JWingsDB.signOut(session.access_token);
-      window.JWingsDB.clearSession();
-      window.location.href = "/index.html";
+      await window.JWingsDB.rpc("request_rider_deactivation", {
+        p_reason: document.getElementById("deactReason").value.trim(),
+      }, session.access_token);
+      document.getElementById("deactivateModal").classList.remove("show");
+      await loadDeactStatus();
     } catch (err) {
-      alert("Couldn't deactivate your account. Please try again or contact support.");
-      btn.disabled = false;
-      btn.textContent = "Yes, deactivate";
+      alert("Couldn't send your request. Please try again or contact support.");
     }
+    btn.disabled = false;
+    btn.textContent = "Send request";
   });
+
+  async function loadDeactStatus() {
+    const note = document.getElementById("deactStatus");
+    const btn = document.getElementById("deactivateBtn");
+    try {
+      const rows = await window.JWingsDB.select(
+        "deactivation_requests", "select=status,created_at&order=created_at.desc&limit=1", session.access_token
+      );
+      const latest = rows[0];
+      if (latest && latest.status === "pending") {
+        note.style.display = "block"; note.style.color = "var(--orange-500)";
+        note.textContent = "Your deactivation request is waiting for admin approval.";
+        btn.disabled = true; btn.textContent = "Request sent";
+      } else if (latest && latest.status === "rejected") {
+        note.style.display = "block"; note.style.color = "var(--muted)";
+        note.textContent = "Your last request was not approved. You can send another one if you still want to deactivate.";
+      }
+    } catch (e) { /* leave the button as is */ }
+  }
+  loadDeactStatus();
 
   document.getElementById("logoutBtn").addEventListener("click", async () => {
     await window.JWingsDB.signOut(session.access_token);
