@@ -500,7 +500,8 @@
           <div class="icon">⚠️</div>
           <h2>Your order is saved, but payment didn't start</h2>
           <p>${pay.error || "We couldn't open the payment page."} Order <strong>${orderNumber}</strong> will not be sent until it is paid.</p>
-          <a href="/customer/order-detail.html?id=${order.id}">View this order</a>
+          <a href="/customer/pay.html?order=${order.id}" style="margin-right:10px;">Try paying again</a>
+          <a href="/customer/order-detail.html?id=${order.id}" style="background:transparent; color:#1a237e; border:1.5px solid #1a237e;">View this order</a>
         </div>`;
     } catch (err) {
       showError(err.message || "Something went wrong placing your order. Please try again.");

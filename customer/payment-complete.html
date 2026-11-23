@@ -32,10 +32,14 @@
   const reference = params.get("reference") || params.get("trxref");
   const card = document.getElementById("card");
 
-  function show(icon, title, text, orderId, retry) {
-    const links = orderId
-      ? `<a class="btn" href="/customer/order-detail.html?id=${orderId}">Track this order</a><a class="btn ghost" href="/customer/dashboard.html">My dashboard</a>`
-      : `<a class="btn" href="/customer/dashboard.html">My dashboard</a>`;
+  function show(icon, title, text, ids, retry) {
+    ids = ids || {};
+    const target = ids.order_id ? `order=${ids.order_id}` : (ids.shipment_id ? `shipment=${ids.shipment_id}` : "");
+    const viewLink = ids.order_id
+      ? `<a class="btn" href="/customer/order-detail.html?id=${ids.order_id}">Track this order</a>`
+      : (ids.shipment_id ? `<a class="btn" href="/customer/dashboard.html">Track this delivery</a>` : "");
+    const retryLink = retry && target ? `<a class="btn" href="/customer/pay.html?${target}">Try paying again</a>` : "";
+    const links = `${retryLink}${viewLink}<a class="btn ghost" href="/customer/dashboard.html">My dashboard</a>`;
     card.innerHTML = `<div class="icon">${icon}</div><h1>${title}</h1><p>${text}</p>${links}`;
   }
 
@@ -52,15 +56,15 @@
       });
       const data = await res.json();
       if (data.status === "paid") {
-        show("🎉", "Payment received!", "Thank you. Your order has been sent to the vendor and nearby riders are being alerted.", data.order_id);
+        show("🎉", "Payment received!", "Thank you. Your order has been sent and nearby riders are being alerted.", data);
         return;
       }
       if (data.status === "failed") {
-        show("⚠️", "Payment didn't go through", "You were not charged. You can open your order and try again.", data.order_id);
+        show("⚠️", "Payment didn't go through", "You were not charged. You can try again.", data, true);
         return;
       }
       if (attempt < 6) { setTimeout(() => verify(attempt + 1), 3000); return; }
-      show("⏳", "Still waiting for confirmation", "If money left your account, your order will update automatically in a few minutes. Check your order page shortly.", data.order_id);
+      show("⏳", "Still waiting for confirmation", "If money left your account, your order will update automatically in a few minutes. Check your order page shortly.", data, true);
     } catch (e) {
       if (attempt < 6) { setTimeout(() => verify(attempt + 1), 3000); return; }
       show("⚠️", "We couldn't confirm your payment", "Please check your order page in a few minutes, or contact JWings support.", null);
