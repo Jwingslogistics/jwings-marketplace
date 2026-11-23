@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-<link rel="icon" type="image/png" href="/assets/images/jwings-logo.png" />
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Checkout — JWings Logistics</title>
@@ -453,7 +452,7 @@
         const trackingId = generateTrackingId();
         trackingIds.push(trackingId);
 
-        const createdShipments = await window.JWingsDB.insert("shipments", {
+        await window.JWingsDB.insert("shipments", {
           tracking_id: trackingId,
           order_id: order.id,
           sender_id: profile.id,
@@ -474,38 +473,34 @@
           status: "order_received",
         }, session.access_token);
 
-        // Best-effort notification -- a rider-email failure should never
-        // block order placement.
-        const createdShipment = createdShipments[0];
-        fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/notify-riders-new-shipment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g" },
-          body: JSON.stringify({
-            tracking_id: trackingId,
-            pickup_address: createdShipment ? createdShipment.pickup_address : null,
-            dropoff_address: `${fullAddress}, ${city}, ${state}`,
-            delivery_fee: createdShipment ? createdShipment.delivery_fee : deliveryFeeBuyer,
-            currency: buyerCurrency,
-            delivery_type: selectedDeliveryType,
-          }),
-        }).catch(() => { /* non-critical */ });
       }
-
-      window.JWingsDB.notifyAdmin("order_placed", {
-        order_number: orderNumber, total, buyer_currency: buyerCurrency, delivery_type: selectedDeliveryType,
-      }, session.access_token);
 
       // Clear the cart now that the order (and shipments) exist.
       await window.JWingsDB.remove("cart_items", `customer_id=eq.${session.user.id}`, session.access_token);
 
+      // Hand over to Paystack to pay. Riders are only alerted once payment succeeds.
+      btn.textContent = "Taking you to payment...";
+      const payRes = await fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/paystack-initialize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g",
+        },
+        body: JSON.stringify({ order_id: order.id }),
+      });
+      const pay = await payRes.json().catch(() => ({}));
+      if (payRes.ok && pay.authorization_url) {
+        window.location.href = pay.authorization_url;
+        return;
+      }
+
       document.getElementById("pageContent").innerHTML = `
         <div class="confirm-state">
-          <div class="icon">🎉</div>
-          <h2>Order placed!</h2>
-          <p>Order <strong>${orderNumber}</strong> has been sent to the vendor.</p>
-          <p style="font-size:13.5px; margin-top:-4px;">Tracking ID${trackingIds.length > 1 ? "s" : ""}: <strong>${trackingIds.join(", ")}</strong></p>
-          <a href="/customer/order-detail.html?id=${order.id}" style="margin-right:10px;">Track this order</a>
-          <a href="/customer/dashboard.html" style="background:transparent; color:#1a237e; border:1.5px solid #1a237e;">My dashboard</a>
+          <div class="icon">⚠️</div>
+          <h2>Your order is saved, but payment didn't start</h2>
+          <p>${pay.error || "We couldn't open the payment page."} Order <strong>${orderNumber}</strong> will not be sent until it is paid.</p>
+          <a href="/customer/order-detail.html?id=${order.id}">View this order</a>
         </div>`;
     } catch (err) {
       showError(err.message || "Something went wrong placing your order. Please try again.");

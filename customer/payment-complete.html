@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment — JWings Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --navy-900:#0f1a5c; --navy-700:#1a237e; --orange-500:#f57c00; --muted:#666a80; --line:#e6e8f0; --bg:#f7f8fc; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", sans-serif; background: var(--bg); color: #1c1f2e; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 40px 32px; max-width: 440px; width: 100%; text-align: center; }
+  .icon { font-size: 44px; margin-bottom: 14px; }
+  h1 { font-family: "Fraunces", Georgia, serif; font-size: 24px; color: var(--navy-900); margin-bottom: 10px; }
+  p { color: var(--muted); font-size: 14.5px; line-height: 1.6; margin-bottom: 22px; }
+  a.btn { display: inline-block; background: var(--navy-700); color: #fff; padding: 12px 22px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none; margin: 4px; }
+  a.btn.ghost { background: transparent; color: var(--navy-700); border: 1.5px solid var(--navy-700); }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="icon">⏳</div>
+  <h1>Confirming your payment...</h1>
+  <p>Please wait a moment. Don't close this page.</p>
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  const params = new URLSearchParams(window.location.search);
+  const reference = params.get("reference") || params.get("trxref");
+  const card = document.getElementById("card");
+
+  function show(icon, title, text, orderId, retry) {
+    const links = orderId
+      ? `<a class="btn" href="/customer/order-detail.html?id=${orderId}">Track this order</a><a class="btn ghost" href="/customer/dashboard.html">My dashboard</a>`
+      : `<a class="btn" href="/customer/dashboard.html">My dashboard</a>`;
+    card.innerHTML = `<div class="icon">${icon}</div><h1>${title}</h1><p>${text}</p>${links}`;
+  }
+
+  async function verify(attempt) {
+    try {
+      const res = await fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/paystack-verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphbHN3a2N0a3VpZHp1Y29jcm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDEwNzIsImV4cCI6MjEwMTA3NzA3Mn0.e1Tw7e5oN9B3r0953k0d_5U8kX1hddJhAXRRfVi9C9g",
+        },
+        body: JSON.stringify({ reference }),
+      });
+      const data = await res.json();
+      if (data.status === "paid") {
+        show("🎉", "Payment received!", "Thank you. Your order has been sent to the vendor and nearby riders are being alerted.", data.order_id);
+        return;
+      }
+      if (data.status === "failed") {
+        show("⚠️", "Payment didn't go through", "You were not charged. You can open your order and try again.", data.order_id);
+        return;
+      }
+      if (attempt < 6) { setTimeout(() => verify(attempt + 1), 3000); return; }
+      show("⏳", "Still waiting for confirmation", "If money left your account, your order will update automatically in a few minutes. Check your order page shortly.", data.order_id);
+    } catch (e) {
+      if (attempt < 6) { setTimeout(() => verify(attempt + 1), 3000); return; }
+      show("⚠️", "We couldn't confirm your payment", "Please check your order page in a few minutes, or contact JWings support.", null);
+    }
+  }
+
+  if (!session) {
+    window.location.href = "/customer/login.html";
+  } else if (!reference) {
+    show("⚠️", "No payment found", "We couldn't find a payment to check.", null);
+  } else {
+    verify(0);
+  }
+</script>
+</body>
+</html>
