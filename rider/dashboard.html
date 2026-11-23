@@ -446,13 +446,13 @@
     applyLockUI();
   }
 
-  // The fee is only shown here, once a delivery is finished.
+  // Riders only ever see their own earning, and only once a delivery is finished.
   async function loadDeliveredJobs() {
     const container = document.getElementById("deliveredJobs");
     try {
       const jobs = await window.JWingsDB.select(
-        "shipments",
-        `select=id,tracking_id,dropoff_address,delivery_fee,currency&rider_id=eq.${rider.id}&status=eq.delivered&order=created_at.desc&limit=10`,
+        "rider_shipments",
+        `select=id,tracking_id,dropoff_address,rider_earning,currency&rider_id=eq.${rider.id}&status=eq.delivered&order=updated_at.desc&limit=10`,
         session.access_token
       );
       if (jobs.length === 0) {
@@ -463,7 +463,7 @@
         <div class="job-card">
           <div class="job-top">
             <span class="job-code">${job.tracking_id}</span>
-            <span class="job-fee">${money(job.delivery_fee, job.currency)}</span>
+            <span class="job-fee">${money(job.rider_earning, job.currency)}</span>
           </div>
           <div class="job-meta">Delivered to ${job.dropoff_address}</div>
         </div>`).join("");
@@ -476,7 +476,7 @@
     const container = document.getElementById("activeJobs");
     try {
       const jobs = await window.JWingsDB.select(
-        "shipments",
+        "rider_shipments",
         `select=*&rider_id=eq.${rider.id}&status=neq.delivered&status=neq.cancelled&order=created_at.desc`,
         session.access_token
       );
@@ -507,7 +507,7 @@
 
       // Rough "completed today" count
       const completed = await window.JWingsDB.select(
-        "shipments",
+        "rider_shipments",
         `select=id&rider_id=eq.${rider.id}&status=eq.delivered`,
         session.access_token
       );
@@ -529,7 +529,7 @@
 
     try {
       const jobs = await window.JWingsDB.select(
-        "shipments",
+        "rider_shipments",
         `select=*&rider_id=is.null&status=eq.order_received&order=created_at.asc`,
         session.access_token
       );
@@ -608,12 +608,7 @@
         btn.disabled = true;
         btn.textContent = "Accepting...";
         try {
-          await window.JWingsDB.update("shipments", `id=eq.${jobId}`, {
-            rider_id: rider.id, status: "rider_assigned",
-          }, session.access_token);
-          await window.JWingsDB.insert("shipment_events", {
-            shipment_id: jobId, status: "rider_assigned", note: "Rider accepted the job",
-          }, session.access_token);
+          await window.JWingsDB.rpc("rider_accept_job", { p_job_id: jobId }, session.access_token);
           await loadJobs();
         } catch (err) {
           await loadActiveJobs();
@@ -641,10 +636,7 @@
         btn.disabled = true;
         btn.textContent = "Updating...";
         try {
-          await window.JWingsDB.update("shipments", `id=eq.${jobId}`, { status: nextStatus }, session.access_token);
-          await window.JWingsDB.insert("shipment_events", {
-            shipment_id: jobId, status: nextStatus,
-          }, session.access_token);
+          await window.JWingsDB.rpc("rider_advance_job", { p_job_id: jobId, p_status: nextStatus }, session.access_token);
           await loadJobs();
         } catch (err) {
           alert("Couldn't update this delivery. Please try again.");
