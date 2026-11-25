@@ -230,8 +230,21 @@ async function signUp(email, password, extra = {}) {
     headers: baseHeaders,
     body: JSON.stringify({ email, password, data: extra }),
   });
-  if (!res.ok) throw new Error(`Sign up failed: ${res.status}`);
-  return res.json();
+  const EMAIL_USED = "This email has already been used to sign up. Please log in instead, or use \"Forgot password\" if you can't remember your password.";
+  if (!res.ok) {
+    let msg = "";
+    try { msg = (((await res.json()).msg) || "").toLowerCase(); } catch (_) {}
+    if (msg.includes("already") && msg.includes("registered")) throw new Error(EMAIL_USED);
+    throw new Error(`Sign up failed: ${res.status}`);
+  }
+  const data = await res.json();
+  // For an email that already belongs to a confirmed account, Supabase replies
+  // "success" but returns a user with no identities. Detect that and say so.
+  const user = data && (data.user || data);
+  if (user && Array.isArray(user.identities) && user.identities.length === 0) {
+    throw new Error(EMAIL_USED);
+  }
+  return data;
 }
 
 async function signIn(email, password) {
@@ -398,22 +411,6 @@ function redirectForRole(role) {
   window.location.href = routes[role] || "/customer/dashboard.html";
 }
 
-// ---- Admin notifications -------------------------------------------------
-//
-// Fire-and-forget email to every admin account, via the notify-admin-event
-// edge function. Never throws and never blocks the caller -- a notification
-// failure should never stop an order, application, or withdrawal from
-// going through. Requires an authenticated session (the function requires a
-// valid JWT), which every call site already has.
-
-function notifyAdmin(eventType, payload, accessToken) {
-  fetch(`${SUPABASE_URL}/functions/v1/notify-admin-event`, {
-    method: "POST",
-    headers: authHeaders(accessToken),
-    body: JSON.stringify({ event_type: eventType, payload: payload || {} }),
-  }).catch(() => { /* non-critical */ });
-}
-
 // ---- Exports ------------------------------------------------------------
 
 window.JWingsDB = {
@@ -427,7 +424,6 @@ window.JWingsDB = {
   getSignedUrl,
   getExchangeRate,
   formatMoney,
-  notifyAdmin,
   signUp,
   signIn,
   signOut,
