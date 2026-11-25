@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Admin Login — JWings Logistics</title>
+<link rel="icon" type="image/png" href="/assets/images/jwings-logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/auth.css" />
+</head>
+<body>
+<div class="auth-shell">
+
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Logistics</span>
+    </div>
+    <div class="brand-copy">
+      <div class="eyebrow">JWings Admin</div>
+      <h1>Platform<br/>control.</h1>
+      <p>Sign in to manage users, vendors, riders and orders across the marketplace.</p>
+    </div>
+    <div class="brand-stats">
+      <div><strong>Staff</strong><span>Authorised access only</span></div>
+      <div><strong>Live</strong><span>Platform overview</span></div>
+    </div>
+  </div>
+
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="mobile-logo">
+        <img src="/assets/images/jwings-logo.png" alt="JWings" />
+        <span>JWings Logistics</span>
+      </div>
+
+      <h2>Admin log in</h2>
+      <p class="subtitle">Enter your admin email and password.</p>
+
+      <div class="error-banner" id="errorBanner"></div>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="identifier">Email</label>
+          <input type="text" id="identifier" name="identifier" placeholder="admin@example.com" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div style="position:relative;">
+            <input type="password" id="password" name="password" placeholder="Your password" autocomplete="current-password" required style="padding-right:52px;" />
+            <button type="button" id="togglePassword" aria-label="Show password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:12.5px; font-weight:600; color:#666a80; font-family:inherit;">Show</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">Log in</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const errorBanner = document.getElementById("errorBanner");
+  const submitBtn = document.getElementById("submitBtn");
+
+  const passwordInput = document.getElementById("password");
+  const togglePasswordBtn = document.getElementById("togglePassword");
+  togglePasswordBtn.addEventListener("click", () => {
+    const isHidden = passwordInput.type === "password";
+    passwordInput.type = isHidden ? "text" : "password";
+    togglePasswordBtn.textContent = isHidden ? "Hide" : "Show";
+    togglePasswordBtn.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+  });
+
+  function showError(message) {
+    errorBanner.textContent = message;
+    errorBanner.classList.add("show");
+  }
+  function hideError() {
+    errorBanner.classList.remove("show");
+  }
+
+  // Already signed in as an admin? Go straight to the dashboard.
+  (async function checkExistingSession() {
+    const existing = window.JWingsDB.getSession();
+    if (!existing) return;
+    try {
+      const profile = await window.JWingsDB.getMyProfile(existing.access_token);
+      if (profile && profile.role === "admin") {
+        window.location.href = "/admin/dashboard.html";
+      }
+    } catch (err) { /* stay on login page */ }
+  })();
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    hideError();
+
+    const identifier = document.getElementById("identifier").value.trim();
+    const password = document.getElementById("password").value;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Logging in...";
+
+    try {
+      const result = await window.JWingsDB.signIn(identifier, password);
+      window.JWingsDB.saveSession(result);
+
+      const profile = await window.JWingsDB.getMyProfile(result.access_token);
+      if (!profile || profile.role !== "admin") {
+        try { await window.JWingsDB.signOut(result.access_token); } catch (err) { /* ignore */ }
+        window.JWingsDB.clearSession();
+        throw new Error("This login is for admins only.");
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get("redirect");
+      window.location.href = (redirectTo && redirectTo.startsWith("/admin/") && !redirectTo.startsWith("//"))
+        ? redirectTo
+        : "/admin/dashboard.html";
+    } catch (err) {
+      showError(err.message || "Couldn't log in. Check your details and try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Log in";
+    }
+  });
+</script>
+</body>
+</html>
