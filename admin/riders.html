@@ -137,7 +137,7 @@
 <script src="/shared/supabase-client.js"></script>
 <script>
   const session = window.JWingsDB.getSession();
-  if (!session) window.location.href = "/customer/login.html?redirect=/admin/riders.html";
+  if (!session) window.location.href = "/admin/login.html?redirect=/admin/riders.html";
 
   let allRiders = [];
   let activeFilter = "all";
@@ -349,7 +349,7 @@
   document.getElementById("logoutBtn").addEventListener("click", async () => {
     await window.JWingsDB.signOut(session.access_token);
     window.JWingsDB.clearSession();
-    window.location.href = "/customer/login.html";
+    window.location.href = "/admin/login.html";
   });
 
   init();
