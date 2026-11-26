@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="/assets/images/jwings-logo.png" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Deliveries — JWings Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0f1a5c; --navy-700: #1a237e; --navy-500: #2c3a9e;
+    --orange-500: #f57c00; --ink: #1c1f2e; --muted: #666a80;
+    --line: #e6e8f0; --bg: #f7f8fc; --white: #ffffff; --success: #1e9e6a; --danger: #d64545;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { text-decoration: none; color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  @media (max-width: 800px) { .shell { grid-template-columns: 1fr; } .side { display: none; } }
+
+  .side { background: var(--navy-900); color: var(--white); padding: 24px 18px; display: flex; flex-direction: column; }
+  .side-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; padding: 0 6px; }
+  .side-logo img { width: 26px; height: 26px; }
+  .side-logo span { font-weight: 700; font-size: 14.5px; }
+  .side nav { display: flex; flex-direction: column; gap: 4px; }
+  .side nav a { padding: 10px 12px; border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.75); }
+  .side nav a.active, .side nav a:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+  .side-foot { margin-top: auto; }
+  .logout-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer; font-family: var(--font-body); padding: 10px 12px; }
+  .logout-btn:hover { color: var(--white); }
+
+  .main { padding: 32px 4vw 64px; min-width: 0; }
+  .top-row { margin-bottom: 20px; }
+  .top-row h1 { font-family: var(--font-display); font-size: 24px; color: var(--navy-900); }
+  .top-row p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .tab { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--white); font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; font-family: var(--font-body); }
+  .tab.active { background: var(--navy-900); border-color: var(--navy-900); color: var(--white); }
+  .tab .count { margin-left: 6px; opacity: 0.75; font-weight: 500; }
+
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 8px 20px 12px; overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; min-width: 860px; }
+  .data-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; padding: 12px 10px 8px; border-bottom: 1px solid var(--line); }
+  .data-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .route { max-width: 260px; color: var(--ink); line-height: 1.35; }
+  .route small { display: block; color: var(--muted); font-size: 12px; }
+  .tid { font-weight: 600; white-space: nowrap; }
+
+  .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .status-order_received { background: #e8ecfb; color: var(--navy-700); }
+  .status-rider_assigned, .status-picked_up { background: #fff4e5; color: var(--orange-500); }
+  .status-in_transit, .status-arriving_soon { background: #e6f0ff; color: #2563eb; }
+  .status-delivered { background: #e9f9f1; color: var(--success); }
+  .status-cancelled { background: #fdecea; color: var(--danger); }
+  .pay-unpaid { color: var(--danger); font-size: 12px; font-weight: 600; }
+  .pay-paid { color: var(--success); font-size: 12px; font-weight: 600; }
+
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .actions select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; font-family: var(--font-body); background: var(--white); max-width: 190px; }
+  .btn { padding: 8px 14px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-body); }
+  .btn:disabled { opacity: 0.55; cursor: default; }
+  .btn-assign { background: var(--navy-900); color: var(--white); }
+  .btn-assign:hover:not(:disabled) { background: var(--navy-700); }
+  .btn-remove { background: #fdecea; color: var(--danger); }
+  .btn-remove:hover:not(:disabled) { background: #fadbd8; }
+  .muted { color: var(--muted); font-size: 12.5px; }
+
+  .empty-mini { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 13.5px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--white); padding: 12px 18px; border-radius: 10px; font-size: 13.5px; display: none; max-width: 90vw; z-index: 100; }
+  .toast.show { display: block; }
+  .toast.error { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-logo">
+      <img src="/assets/images/jwings-logo.png" alt="JWings" />
+      <span>JWings Admin</span>
+    </div>
+    <nav>
+      <a href="/admin/dashboard.html">Overview</a>
+      <a class="active" href="/admin/deliveries.html">Deliveries</a>
+      <a href="/admin/users.html">Users</a>
+      <a href="/admin/vendors.html">Vendors</a>
+      <a href="/admin/riders.html">Riders</a>
+      <a href="/admin/customers.html">Customers</a>
+    </nav>
+    <div class="side-foot">
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top-row">
+      <h1>Deliveries</h1>
+      <p>Assign a delivery to a rider, move it to another rider, or take it back before pickup.</p>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div class="panel">
+      <table class="data-table" id="table" style="display:none;">
+        <thead>
+          <tr><th>Tracking ID</th><th>Route</th><th>Status</th><th>Rider</th><th>Fee</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty-mini" id="empty">Loading...</div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/shared/supabase-client.js"></script>
+<script>
+  const session = window.JWingsDB.getSession();
+  if (!session) window.location.href = "/admin/login.html?redirect=/admin/deliveries.html";
+
+  const STATUS_LABELS = {
+    order_received: "Needs a rider", rider_assigned: "Rider assigned", picked_up: "Picked up",
+    in_transit: "In transit", arriving_soon: "Arriving soon", delivered: "Delivered", cancelled: "Cancelled",
+  };
+
+  const FILTERS = [
+    { key: "needs",    label: "Needs a rider", match: s => s.status === "order_received" },
+    { key: "assigned", label: "Assigned",      match: s => s.status === "rider_assigned" },
+    { key: "progress", label: "In progress",   match: s => ["picked_up", "in_transit", "arriving_soon"].includes(s.status) },
+    { key: "done",     label: "Completed",     match: s => ["delivered", "cancelled"].includes(s.status) },
+    { key: "all",      label: "All",           match: () => true },
+  ];
+
+  let shipments = [];
+  let riders = [];
+  let activeFilter = "needs";
+
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function money(amount, currency) {
+    const symbol = currency === "NGN" ? "₦" : (currency ? currency + " " : "");
+    return `${symbol}${Number(amount || 0).toLocaleString()}`;
+  }
+
+  function short(text, n) {
+    const t = text || "";
+    return t.length > n ? t.slice(0, n) + "…" : t;
+  }
+
+  function riderLabel(r) {
+    const name = r.profiles && r.profiles.full_name ? r.profiles.full_name : r.rider_code;
+    return `${name} (${r.rider_code})${r.is_online ? " • online" : ""}`;
+  }
+
+  let toastTimer = null;
+  function toast(message, isError) {
+    const el = document.getElementById("toast");
+    el.textContent = message;
+    el.className = "toast show" + (isError ? " error" : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = "toast"; }, 4000);
+  }
+
+  async function loadData() {
+    const [ships, activeRiders] = await Promise.all([
+      window.JWingsDB.select(
+        "shipments",
+        "select=*,riders(id,rider_code,profiles(full_name))&order=created_at.desc&limit=200",
+        session.access_token
+      ),
+      window.JWingsDB.select(
+        "riders",
+        "select=id,rider_code,is_online,status,profiles(full_name)&status=eq.active&order=is_online.desc",
+        session.access_token
+      ),
+    ]);
+    shipments = ships;
+    riders = activeRiders;
+  }
+
+  function renderTabs() {
+    document.getElementById("tabs").innerHTML = FILTERS.map(f => {
+      const count = shipments.filter(f.match).length;
+      return `<button class="tab ${f.key === activeFilter ? "active" : ""}" data-filter="${f.key}">${f.label}<span class="count">${count}</span></button>`;
+    }).join("");
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.addEventListener("click", () => { activeFilter = btn.dataset.filter; render(); });
+    });
+  }
+
+  function actionsFor(s) {
+    if (s.status === "order_received" || s.status === "rider_assigned") {
+      if (s.payment_status !== "paid") return `<span class="muted">Waiting for payment</span>`;
+      const options = riders
+        .filter(r => r.id !== s.rider_id)
+        .map(r => `<option value="${esc(r.id)}">${esc(riderLabel(r))}</option>`).join("");
+      const select = riders.length
+        ? `<select data-select="${esc(s.id)}"><option value="">Choose a rider</option>${options}</select>
+           <button class="btn btn-assign" data-assign="${esc(s.id)}">${s.rider_id ? "Reassign" : "Assign"}</button>`
+        : `<span class="muted">No active riders</span>`;
+      const remove = s.status === "rider_assigned"
+        ? `<button class="btn btn-remove" data-remove="${esc(s.id)}">Remove rider</button>` : "";
+      return `<div class="actions">${select}${remove}</div>`;
+    }
+    return `<span class="muted">No action</span>`;
+  }
+
+  function render() {
+    renderTabs();
+    const filter = FILTERS.find(f => f.key === activeFilter);
+    const rows = shipments.filter(filter.match);
+    const table = document.getElementById("table");
+    const empty = document.getElementById("empty");
+    const tbody = document.getElementById("tbody");
+
+    if (rows.length === 0) {
+      table.style.display = "none";
+      empty.style.display = "block";
+      empty.textContent = "No deliveries here.";
+      return;
+    }
+    empty.style.display = "none";
+    table.style.display = "table";
+
+    tbody.innerHTML = rows.map(s => {
+      const rider = s.riders
+        ? (s.riders.profiles && s.riders.profiles.full_name ? s.riders.profiles.full_name : s.riders.rider_code)
+        : "—";
+      return `
+        <tr>
+          <td class="tid">${esc(s.tracking_id)}<br><span class="${s.payment_status === "paid" ? "pay-paid" : "pay-unpaid"}">${esc(s.payment_status || "unpaid")}</span></td>
+          <td class="route">${esc(short(s.pickup_address, 40))}<small>to ${esc(short(s.dropoff_address, 40))}</small></td>
+          <td><span class="status-pill status-${esc(s.status)}">${esc(STATUS_LABELS[s.status] || s.status)}</span></td>
+          <td>${esc(rider)}</td>
+          <td>${money(s.delivery_fee, s.currency)}</td>
+          <td>${actionsFor(s)}</td>
+        </tr>`;
+    }).join("");
+
+    tbody.querySelectorAll("[data-assign]").forEach(btn => {
+      btn.addEventListener("click", () => assign(btn));
+    });
+    tbody.querySelectorAll("[data-remove]").forEach(btn => {
+      btn.addEventListener("click", () => removeRider(btn));
+    });
+  }
+
+  async function refresh() {
+    try {
+      await loadData();
+      render();
+    } catch (err) {
+      document.getElementById("empty").style.display = "block";
+      document.getElementById("empty").textContent = "Couldn't load deliveries.";
+    }
+  }
+
+  async function assign(btn) {
+    const shipmentId = btn.dataset.assign;
+    const select = document.querySelector(`[data-select="${shipmentId}"]`);
+    const riderId = select ? select.value : "";
+    if (!riderId) { toast("Choose a rider first.", true); return; }
+
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = "Saving...";
+    try {
+      await window.JWingsDB.rpc("admin_assign_shipment", { p_shipment_id: shipmentId, p_rider_id: riderId }, session.access_token);
+      toast("Delivery assigned. The rider has been notified.");
+      await refresh();
+    } catch (err) {
+      toast(err.message || "Couldn't assign this delivery.", true);
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
+  async function removeRider(btn) {
+    const shipmentId = btn.dataset.remove;
+    const reason = window.prompt("Reason for removing the rider (optional). The rider will see this:");
+    if (reason === null) return; // cancelled
+    if (!window.confirm("Remove this rider? The delivery goes back to the pool and this rider can't take it again.")) return;
+
+    btn.disabled = true;
+    try {
+      await window.JWingsDB.rpc("admin_unassign_shipment", { p_shipment_id: shipmentId, p_reason: reason }, session.access_token);
+      toast("Rider removed. The delivery is open to other riders again.");
+      await refresh();
+    } catch (err) {
+      toast(err.message || "Couldn't remove the rider.", true);
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await window.JWingsDB.signOut(session.access_token);
+    window.JWingsDB.clearSession();
+    window.location.href = "/admin/login.html";
+  });
+
+  async function init() {
+    const profile = await window.JWingsDB.getMyProfile(session.access_token);
+    if (!profile || profile.role !== "admin") {
+      window.location.href = "/admin/login.html";
+      return;
+    }
+    await refresh();
+  }
+
+  init();
+</script>
+</body>
+</html>
