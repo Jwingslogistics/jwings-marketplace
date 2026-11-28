@@ -85,6 +85,7 @@
     input.addEventListener("input", () => {
       input.value = input.value.replace(/[^0-9]/g, "");
       if (input.value && i < inputs.length - 1) inputs[i + 1].focus();
+      maybeAutoSubmit();
     });
     input.addEventListener("keydown", (e) => {
       if (e.key === "Backspace" && !input.value && i > 0) inputs[i - 1].focus();
@@ -95,11 +96,20 @@
       digits.forEach((d, idx) => { if (inputs[idx]) inputs[idx].value = d; });
       const next = inputs[Math.min(digits.length, inputs.length - 1)];
       if (next) next.focus();
+      maybeAutoSubmit();
     });
   });
 
   function getCode() {
     return inputs.map((i) => i.value).join("");
+  }
+
+  // Verify automatically as soon as all 6 digits are filled in.
+  function maybeAutoSubmit() {
+    const btn = document.getElementById("submitBtn");
+    if (getCode().length === 6 && !btn.disabled) {
+      document.getElementById("otpForm").requestSubmit();
+    }
   }
 
   const errorBanner = document.getElementById("errorBanner");

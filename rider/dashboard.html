@@ -273,7 +273,7 @@
     setTimeout(() => { document.title = original; }, 8000);
   }
 
-  // ---- Rider location (only jobs within 5 km are shown) ---------------
+  // ---- Rider location (jobs are shown by the rider's area / LGA) -------
   let watchId = null;
   let latestPos = null;
   let gotFirstFix = false;
@@ -297,6 +297,43 @@
         location_updated_at: new Date().toISOString(),
       }, session.access_token);
     } catch (e) { /* will retry on next update */ }
+    maybeResolveArea();
+  }
+
+  // Work out which area (state + LGA, e.g. "Akure South") the rider is in.
+  // Re-checked only when the rider has moved more than 1.5 km or every 15 minutes.
+  let lastAreaPoint = null;
+  let lastAreaAt = 0;
+  let resolvingArea = false;
+  function kmBetween(lat1, lng1, lat2, lng2) {
+    const rad = (d) => (d * Math.PI) / 180;
+    const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 +
+      Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lng2 - lng1) / 2) ** 2;
+    return 6371 * 2 * Math.asin(Math.sqrt(a));
+  }
+  async function maybeResolveArea() {
+    if (!latestPos || !rider || resolvingArea) return;
+    const moved = lastAreaPoint
+      ? kmBetween(lastAreaPoint.lat, lastAreaPoint.lng, latestPos.latitude, latestPos.longitude)
+      : Infinity;
+    if (moved < 1.5 && Date.now() - lastAreaAt < 15 * 60 * 1000) return;
+    resolvingArea = true;
+    try {
+      const res = await fetch("https://jalswkctkuidzucocrmh.supabase.co/functions/v1/resolve-area", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ lat: latestPos.latitude, lng: latestPos.longitude }),
+      });
+      if (res.ok) {
+        lastAreaPoint = { lat: latestPos.latitude, lng: latestPos.longitude };
+        lastAreaAt = Date.now();
+        loadAvailableJobs();
+      }
+    } catch (e) { /* try again on the next location update */ }
+    resolvingArea = false;
   }
 
   function startLocationTracking() {
@@ -316,7 +353,7 @@
         if (first) loadAvailableJobs();
       },
       () => {
-        setLocationTip("📍 Turn on location for this site (tap Allow) to see jobs near you. Only jobs within 5 km are shown.");
+        setLocationTip("📍 Turn on location for this site (tap Allow) to see jobs in your area.");
       },
       { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 }
     );
@@ -528,11 +565,16 @@
     }
 
     try {
-      const jobs = await window.JWingsDB.select(
+      const fetched = await window.JWingsDB.select(
         "rider_shipments",
         `select=*&rider_id=is.null&status=eq.order_received&order=created_at.asc`,
         session.access_token
       );
+      // Jobs in the rider's own LGA first, then the rest of the city (oldest first within each).
+      const jobs = [
+        ...fetched.filter((j) => j.in_my_lga),
+        ...fetched.filter((j) => !j.in_my_lga),
+      ];
 
       document.getElementById("availableCount").textContent = jobs.length > 0 ? String(jobs.length) : "";
 
@@ -546,7 +588,7 @@
       if (changed) {
         lastRenderedIds = ids.join(",");
         if (jobs.length === 0) {
-          container.innerHTML = `<div class="empty-mini"><div class="icon">✅</div><p>No jobs within 5 km of you right now — check back soon.</p></div>`;
+          container.innerHTML = `<div class="empty-mini"><div class="icon">✅</div><p>No jobs in your area right now — check back soon.</p></div>`;
         } else {
           container.innerHTML = jobs.map(renderAvailableJobCard).join("");
           attachAcceptHandlers();
@@ -563,10 +605,10 @@
       <div class="job-card">
         <div class="job-top">
           <span class="job-code">${job.tracking_id}</span>
-          <span class="status-pill">New job</span>
+          <span class="status-pill">${job.in_my_lga ? "Your area" : "New job"}</span>
         </div>
         <div class="job-route">
-          <div class="point"><div class="tag">Pickup</div><div class="addr">${job.pickup_address}</div></div>
+          <div class="point"><div class="tag">Pickup${job.pickup_area ? " · " + job.pickup_area : ""}</div><div class="addr">${job.pickup_address}</div></div>
           <div class="point"><div class="tag">Drop-off</div><div class="addr">${job.dropoff_address}</div></div>
         </div>
         <div class="job-meta">${job.package_type} · ${job.package_weight_kg}kg · ${job.delivery_type.replace("_", " ")}</div>

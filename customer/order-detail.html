@@ -284,7 +284,7 @@
         <h3>Payment summary</h3>
         <div class="summary-row"><span>Subtotal</span><span>${money(order.subtotal, order.buyer_currency)}</span></div>
         <div class="summary-row"><span>Delivery fee</span><span>${money(order.delivery_fee, order.buyer_currency)}</span></div>
-        <div class="summary-row"><span>Service fee</span><span>${money(order.service_fee, order.buyer_currency)}</span></div>
+        ${Number(order.service_fee) > 0 ? `<div class="summary-row"><span>Service fee</span><span>${money(order.service_fee, order.buyer_currency)}</span></div>` : ""}
         <div class="summary-row total"><span>Total</span><span>${money(order.total, order.buyer_currency)}</span></div>
       </div>
     `;

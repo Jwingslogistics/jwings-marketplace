@@ -89,6 +89,17 @@
     }
   });
 
+  // Auto-submit as soon as the 6th digit is typed or pasted.
+  const codeInput = document.getElementById("code");
+  codeInput.setAttribute("maxlength", "6");
+  codeInput.setAttribute("autocomplete", "one-time-code");
+  codeInput.addEventListener("input", () => {
+    codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 6);
+    if (codeInput.value.length === 6 && emailInput.value.trim() && !submitBtn.disabled) {
+      document.getElementById("otpForm").requestSubmit();
+    }
+  });
+
   document.getElementById("resendLink").addEventListener("click", async (e) => {
     e.preventDefault();
     const email = emailInput.value.trim();

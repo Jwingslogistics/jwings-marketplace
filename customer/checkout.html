@@ -118,6 +118,8 @@
           <label for="state">State</label>
           <input type="text" id="state" placeholder="e.g. Ondo" required />
           <div class="geo-status" id="addressGeoStatus"></div>
+          <button type="button" id="useLocationBtn" style="margin-top:8px; padding:9px 14px; border:1.5px solid #1a237e; background:#fff; color:#1a237e; border-radius:9px; font-weight:700; font-size:13px; cursor:pointer;">📍 Use my current location</button>
+          <div style="font-size:11.5px; color:#666a80; margin-top:5px;">Standing at the delivery address? Tap this for the most accurate delivery fee. You still need to fill in the address above so the rider can find you.</div>
         </div>
         <div class="field">
           <label for="orderNotes">Order notes (optional)</label>
@@ -154,7 +156,7 @@
       <div class="summary-row"><span>Subtotal</span><span id="sumSubtotal">₦0</span></div>
       <div class="summary-row"><span>Distance</span><span id="sumDistance">—</span></div>
       <div class="summary-row"><span>Delivery fee</span><span id="sumDelivery">Enter your address</span></div>
-      <div class="summary-row"><span>Service fee</span><span id="sumService">₦500</span></div>
+      <div class="summary-row" id="serviceRow" style="display:none;"><span>Service fee</span><span id="sumService">₦0</span></div>
       <div class="summary-row total"><span>Total</span><span id="sumTotal">₦0</span></div>
       <button class="place-order-btn" id="placeOrderBtn">Place order</button>
     </div>
@@ -169,7 +171,7 @@
   // display only -- the authoritative fee is computed server-side by a
   // database trigger from the coordinates we send, so it can't be
   // spoofed by editing anything in this page.
-  const SERVICE_FEE_NGN = 200;
+  const SERVICE_FEE_NGN = 0; // customers no longer pay a service fee (vendors pay 5% commission)
   let selectedDeliveryType = "standard";
   let deliveryAddressCoords = null; // { lat, lng }
 
@@ -206,7 +208,10 @@
     ));
   }
 
+  let usingGps = false;
+
   async function geocodeDeliveryAddress() {
+    if (usingGps) return; // exact phone location wins until the address is edited
     const status = document.getElementById("addressGeoStatus");
     const fullAddress = document.getElementById("fullAddress").value.trim();
     const city = document.getElementById("city").value.trim();
@@ -234,9 +239,41 @@
     renderSummary();
   }
 
+  document.getElementById("useLocationBtn").addEventListener("click", () => {
+    const status = document.getElementById("addressGeoStatus");
+    const btn = document.getElementById("useLocationBtn");
+    if (!navigator.geolocation) {
+      status.textContent = "This phone or browser can't share its location.";
+      status.className = "geo-status err";
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "Getting your location...";
+    status.textContent = "";
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        usingGps = true;
+        deliveryAddressCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        status.textContent = "✓ Using your current location";
+        status.className = "geo-status ok";
+        btn.disabled = false;
+        btn.textContent = "📍 Use my current location";
+        renderSummary();
+      },
+      () => {
+        status.textContent = "Couldn't get your location. Allow location access for this site, or type your address instead.";
+        status.className = "geo-status err";
+        btn.disabled = false;
+        btn.textContent = "📍 Use my current location";
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+    );
+  });
+
   let geoDebounce = null;
   ["fullAddress", "city", "state"].forEach(id => {
     document.getElementById(id).addEventListener("input", () => {
+      usingGps = false; // address edited: look it up again
       clearTimeout(geoDebounce);
       geoDebounce = setTimeout(geocodeDeliveryAddress, 1200);
     });
@@ -442,8 +479,10 @@
       );
 
       function generateTrackingId() {
-        const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
-        return `JWT-${Date.now().toString().slice(-6)}${rand}`;
+        // Short 10-character code: "JWT-" + 6 easy-to-read letters/digits.
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        const bytes = crypto.getRandomValues(new Uint8Array(6));
+        return "JWT-" + Array.from(bytes, (b) => chars[b % chars.length]).join("");
       }
 
       const trackingIds = [];

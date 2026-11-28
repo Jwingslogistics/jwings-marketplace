@@ -297,8 +297,10 @@
   function showError(msg) { errorBanner.textContent = msg; errorBanner.classList.add("show"); }
 
   function generateTrackingId() {
-    const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
-    return `JWT-${Date.now().toString().slice(-6)}${rand}`;
+    // Short 10-character code: "JWT-" + 6 easy-to-read letters/digits.
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const bytes = crypto.getRandomValues(new Uint8Array(6));
+    return "JWT-" + Array.from(bytes, (b) => chars[b % chars.length]).join("");
   }
 
   document.getElementById("submitBtn").addEventListener("click", async () => {
